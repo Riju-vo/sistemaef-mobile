@@ -72,12 +72,12 @@ class AppShell extends ConsumerWidget {
       const _ModuleItem('activos', 'Activos'),
       const _ModuleItem('clientes', 'Clientes'),
       const _ModuleItem('pdvs', 'PDVs'),
-      const _ModuleItem('catalogos', 'Catalogos'),
       const _ModuleItem('asignaciones', 'Asignaciones'),
-      if (rol == TipoRol.autorizador || rol == TipoRol.administrador)
+      if (rol == TipoRol.administrador) ...[
+        const _ModuleItem('catalogos', 'Catalogos'),
         const _ModuleItem('bitacora', 'Bitacora'),
-      if (rol == TipoRol.administrador)
         const _ModuleItem('usuarios', 'Usuarios'),
+      ],
       const _ModuleItem('me', 'Mi sesion'),
       const _ModuleItem('tickets', 'Tickets'),
       const _ModuleItem('reportes', 'Reportes'),

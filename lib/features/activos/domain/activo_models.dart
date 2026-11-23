@@ -4,7 +4,6 @@ class ActivoItem {
   final String idActivo;
   final String serial;
   final String etiqueta;
-  final int idDescripcionEquipo;
   final String descripcionEquipo;
   final String? fabricante;
   final String? modelo;
@@ -12,16 +11,14 @@ class ActivoItem {
   final String? provincia;
   final String? observacion;
   final bool activo;
-  final int idTipoActivo;
   final String tipoActivo;
-  final int idEstadoActivo;
   final String estadoActivo;
+  final String? sucursal;
 
   const ActivoItem({
     required this.idActivo,
     required this.serial,
     required this.etiqueta,
-    required this.idDescripcionEquipo,
     required this.descripcionEquipo,
     required this.fabricante,
     required this.modelo,
@@ -29,10 +26,9 @@ class ActivoItem {
     required this.provincia,
     required this.observacion,
     required this.activo,
-    required this.idTipoActivo,
     required this.tipoActivo,
-    required this.idEstadoActivo,
     required this.estadoActivo,
+    required this.sucursal,
   });
 
   factory ActivoItem.fromJson(Map<String, dynamic> json) {
@@ -40,7 +36,6 @@ class ActivoItem {
       idActivo: (json['id_activo'] ?? '').toString(),
       serial: (json['serial'] ?? '') as String,
       etiqueta: (json['etiqueta'] ?? '') as String,
-      idDescripcionEquipo: (json['id_descripcion_equipo'] ?? 0) as int,
       descripcionEquipo: (json['descripcion_equipo'] ?? '') as String,
       fabricante: json['fabricante'] as String?,
       modelo: json['modelo'] as String?,
@@ -48,27 +43,9 @@ class ActivoItem {
       provincia: json['provincia'] as String?,
       observacion: json['observacion'] as String?,
       activo: (json['activo'] ?? false) as bool,
-      idTipoActivo: (json['id_tipo_activo'] ?? 0) as int,
       tipoActivo: (json['tipo_activo'] ?? '') as String,
-      idEstadoActivo: (json['id_estado_activo'] ?? 0) as int,
       estadoActivo: (json['estado_activo'] ?? '') as String,
-    );
-  }
-}
-
-class CatalogOption {
-  final int id;
-  final String nombre;
-
-  const CatalogOption({
-    required this.id,
-    required this.nombre,
-  });
-
-  factory CatalogOption.fromJson(Map<String, dynamic> json) {
-    return CatalogOption(
-      id: (json['id'] ?? 0) as int,
-      nombre: (json['nombre'] ?? '') as String,
+      sucursal: json['sucursal'] as String?,
     );
   }
 }
@@ -76,43 +53,46 @@ class CatalogOption {
 class ActivoUpsertPayload {
   final String serial;
   final String etiqueta;
-  final int idDescripcionEquipo;
+  final String descripcionEquipo;
   final String? fabricante;
   final String? modelo;
   final String? anioFabricacion;
   final String? provincia;
   final String? observacion;
   final bool activo;
-  final int idTipoActivo;
-  final int idEstadoActivo;
+  final String tipoActivo;
+  final String estadoActivo;
+  final String? sucursal;
 
   const ActivoUpsertPayload({
     required this.serial,
     required this.etiqueta,
-    required this.idDescripcionEquipo,
+    required this.descripcionEquipo,
     required this.fabricante,
     required this.modelo,
     required this.anioFabricacion,
     required this.provincia,
     required this.observacion,
     required this.activo,
-    required this.idTipoActivo,
-    required this.idEstadoActivo,
+    required this.tipoActivo,
+    required this.estadoActivo,
+    required this.sucursal,
   });
 
   Map<String, dynamic> toJson() {
     return {
       'serial': serial.trim(),
       'etiqueta': etiqueta.trim(),
-      'id_descripcion_equipo': idDescripcionEquipo,
+      'descripcion_equipo': descripcionEquipo.trim(),
       'fabricante': _optionalText(fabricante),
       'modelo': _optionalText(modelo),
       'anio_fabricacion': _optionalText(anioFabricacion),
       'provincia': _optionalText(provincia),
       'observacion': _optionalText(observacion),
       'activo': activo,
-      'id_tipo_activo': idTipoActivo,
-      'id_estado_activo': idEstadoActivo,
+      'tipo_activo': tipoActivo.trim(),
+      'estado_activo': estadoActivo.trim(),
+      'sucursal': _optionalText(sucursal),
     };
   }
 }
@@ -210,48 +190,15 @@ class ActivosListResponse {
   }
 }
 
-class ClienteAsignado {
-  final String idCliente;
-  final String codigoCliente;
-  final String nombre;
-  final String? telefono;
-  final String categoriaSofia;
-  final String? direccion;
-  final double? latitud;
-  final double? longitud;
-
-  const ClienteAsignado({
-    required this.idCliente,
-    required this.codigoCliente,
-    required this.nombre,
-    required this.telefono,
-    required this.categoriaSofia,
-    required this.direccion,
-    required this.latitud,
-    required this.longitud,
-  });
-
-  factory ClienteAsignado.fromJson(Map<String, dynamic> json) {
-    return ClienteAsignado(
-      idCliente: (json['id_cliente'] ?? '').toString(),
-      codigoCliente: (json['codigo_cliente'] ?? '').toString(),
-      nombre: (json['nombre'] ?? '') as String,
-      telefono: json['telefono'] as String?,
-      categoriaSofia: (json['categoria_sofia'] ?? '') as String,
-      direccion: json['direccion'] as String?,
-      latitud: (json['latitud'] as num?)?.toDouble(),
-      longitud: (json['longitud'] as num?)?.toDouble(),
-    );
-  }
-}
-
 class PdvAsignado {
   final String idPdv;
   final String nombreNegocio;
   final String? direccion;
+  final String direccionId;
   final double? latitud;
   final double? longitud;
   final String? nit;
+  final String? telefono;
   final String supracanal;
   final String canal;
 
@@ -259,9 +206,11 @@ class PdvAsignado {
     required this.idPdv,
     required this.nombreNegocio,
     required this.direccion,
+    required this.direccionId,
     required this.latitud,
     required this.longitud,
     required this.nit,
+    required this.telefono,
     required this.supracanal,
     required this.canal,
   });
@@ -271,9 +220,11 @@ class PdvAsignado {
       idPdv: (json['id_pdv'] ?? '').toString(),
       nombreNegocio: (json['nombre_negocio'] ?? '') as String,
       direccion: json['direccion'] as String?,
+      direccionId: (json['direccion_id'] ?? '').toString(),
       latitud: (json['latitud'] as num?)?.toDouble(),
       longitud: (json['longitud'] as num?)?.toDouble(),
       nit: json['nit'] as String?,
+      telefono: json['telefono'] as String?,
       supracanal: (json['supracanal'] ?? '') as String,
       canal: (json['canal'] ?? '') as String,
     );
@@ -285,15 +236,13 @@ class AsignacionActivaContexto {
   final String fechaInicio;
   final String estado;
   final String? observacion;
-  final ClienteAsignado cliente;
-  final PdvAsignado? pdv;
+  final PdvAsignado pdv;
 
   const AsignacionActivaContexto({
     required this.idAsignacionActivo,
     required this.fechaInicio,
     required this.estado,
     required this.observacion,
-    required this.cliente,
     required this.pdv,
   });
 
@@ -303,12 +252,7 @@ class AsignacionActivaContexto {
       fechaInicio: (json['fecha_inicio'] ?? '') as String,
       estado: (json['estado'] ?? '') as String,
       observacion: json['observacion'] as String?,
-      cliente: ClienteAsignado.fromJson(
-        (json['cliente'] as Map).cast<String, dynamic>(),
-      ),
-      pdv: json['pdv'] == null
-          ? null
-          : PdvAsignado.fromJson((json['pdv'] as Map).cast<String, dynamic>()),
+      pdv: PdvAsignado.fromJson((json['pdv'] as Map).cast<String, dynamic>()),
     );
   }
 }

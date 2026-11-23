@@ -5,12 +5,14 @@ class AuthUser {
   final String email;
   final String username;
   final TipoRol? rol;
+  final String? sucursal;
 
   const AuthUser({
     required this.id,
     required this.email,
     required this.username,
     required this.rol,
+    required this.sucursal,
   });
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
@@ -19,6 +21,7 @@ class AuthUser {
       email: (json['email'] ?? '') as String,
       username: (json['username'] ?? '') as String,
       rol: tipoRolFromInt(json['rol'] as int?),
+      sucursal: json['sucursal'] as String?,
     );
   }
 }

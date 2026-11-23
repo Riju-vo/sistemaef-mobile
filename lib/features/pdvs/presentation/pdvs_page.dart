@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme.dart';
-import '../../../core/errors/result.dart';
 import '../../../features/auth/presentation/auth_controller.dart';
 import '../../../shared/models/tipo_rol.dart';
 import '../../../shared/ui/data_card.dart';
 import '../../../shared/ui/pagination_controls.dart';
 import '../../../shared/ui/page_header.dart';
 import '../../../shared/ui/status_badge.dart';
-import '../../clientes/domain/cliente_models.dart';
 import '../data/pdvs_repository.dart';
 import '../domain/pdv_models.dart';
 import 'pdvs_controller.dart';
@@ -24,18 +22,21 @@ class PdvsPage extends ConsumerStatefulWidget {
 class _PdvsPageState extends ConsumerState<PdvsPage> {
   late final TextEditingController _nombreCtrl;
   late final TextEditingController _nitCtrl;
+  late final TextEditingController _tipoCanalCtrl;
 
   @override
   void initState() {
     super.initState();
     _nombreCtrl = TextEditingController();
     _nitCtrl = TextEditingController();
+    _tipoCanalCtrl = TextEditingController();
   }
 
   @override
   void dispose() {
     _nombreCtrl.dispose();
     _nitCtrl.dispose();
+    _tipoCanalCtrl.dispose();
     super.dispose();
   }
 
@@ -50,7 +51,7 @@ class _PdvsPageState extends ConsumerState<PdvsPage> {
       children: [
         PageHeader(
           title: 'PDVs',
-          subtitle: 'Puntos de venta vinculados a clientes activos',
+          subtitle: 'Puntos de venta',
           action: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -68,196 +69,121 @@ class _PdvsPageState extends ConsumerState<PdvsPage> {
             ],
           ),
         ),
-        FutureBuilder<_PdvOptionsData>(
-          future: _loadOptions(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const Padding(
-                padding: EdgeInsets.only(bottom: 8),
-                child: LinearProgressIndicator(),
-              );
-            }
-
-            final options = snapshot.data!;
-            return DataCard(
-              child: Column(
+        DataCard(
+          child: Column(
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String?>(
-                          isExpanded: true,
-                          value:
-                              query.idCliente.isEmpty ? null : query.idCliente,
-                          decoration:
-                              const InputDecoration(labelText: 'Cliente'),
-                          items: [
-                            const DropdownMenuItem<String?>(
-                              value: null,
-                              child: Text('Todos'),
-                            ),
-                            ...options.clientes.map(
-                              (item) => DropdownMenuItem<String?>(
-                                value: item.idCliente,
-                                child: Text(
-                                  '${item.codigoCliente} - ${item.nombre}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            ref.read(pdvsQueryProvider.notifier).state =
-                                query.copyWith(page: 1, idCliente: value ?? '');
-                          },
-                        ),
+                  Expanded(
+                    child: TextField(
+                      controller: _nombreCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre negocio',
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<int?>(
-                          isExpanded: true,
-                          value: query.idTipoCanal,
-                          decoration: const InputDecoration(labelText: 'Canal'),
-                          items: [
-                            const DropdownMenuItem<int?>(
-                              value: null,
-                              child: Text('Todos'),
-                            ),
-                            ...options.tiposCanal.map(
-                              (item) => DropdownMenuItem<int?>(
-                                value: item.id,
-                                child: Text(
-                                  item.nombre,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            ref.read(pdvsQueryProvider.notifier).state =
-                                value == null
-                                    ? query.copyWith(
-                                        page: 1,
-                                        clearTipoCanal: true,
-                                      )
-                                    : query.copyWith(
-                                        page: 1,
-                                        idTipoCanal: value,
-                                      );
-                          },
-                        ),
-                      ),
-                    ],
+                      onSubmitted: (value) {
+                        ref.read(pdvsQueryProvider.notifier).state =
+                            query.copyWith(
+                          page: 1,
+                          nombreNegocio: value.trim(),
+                        );
+                      },
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _nombreCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Nombre negocio',
-                          ),
-                          onSubmitted: (value) {
-                            ref.read(pdvsQueryProvider.notifier).state =
-                                query.copyWith(
-                              page: 1,
-                              nombreNegocio: value.trim(),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextField(
-                          controller: _nitCtrl,
-                          decoration: const InputDecoration(labelText: 'NIT'),
-                          onSubmitted: (value) {
-                            ref.read(pdvsQueryProvider.notifier).state =
-                                query.copyWith(page: 1, nit: value.trim());
-                          },
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _nitCtrl,
+                      decoration: const InputDecoration(labelText: 'NIT'),
+                      onSubmitted: (value) {
+                        ref.read(pdvsQueryProvider.notifier).state =
+                            query.copyWith(page: 1, nit: value.trim());
+                      },
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<Supracanal?>(
-                          isExpanded: true,
-                          value: query.supracanal,
-                          decoration: const InputDecoration(
-                            labelText: 'Supracanal',
-                          ),
-                          items: const [
-                            DropdownMenuItem<Supracanal?>(
-                              value: null,
-                              child: Text('Todos'),
-                            ),
-                            DropdownMenuItem<Supracanal?>(
-                              value: Supracanal.onPremise,
-                              child: Text('OnPremise'),
-                            ),
-                            DropdownMenuItem<Supracanal?>(
-                              value: Supracanal.offPremise,
-                              child: Text('OffPremise'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            ref.read(pdvsQueryProvider.notifier).state =
-                                value == null
-                                    ? query.copyWith(
-                                        page: 1,
-                                        clearSupracanal: true,
-                                      )
-                                    : query.copyWith(
-                                        page: 1,
-                                        supracanal: value,
-                                      );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<bool?>(
-                          isExpanded: true,
-                          value: query.activo,
-                          decoration:
-                              const InputDecoration(labelText: 'Activo'),
-                          items: const [
-                            DropdownMenuItem<bool?>(
-                              value: true,
-                              child: Text('Si'),
-                            ),
-                            DropdownMenuItem<bool?>(
-                              value: false,
-                              child: Text('No'),
-                            ),
-                            DropdownMenuItem<bool?>(
-                              value: null,
-                              child: Text('Todos'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            ref.read(pdvsQueryProvider.notifier).state =
-                                value == null
-                                    ? query.copyWith(page: 1, clearActivo: true)
-                                    : query.copyWith(page: 1, activo: value);
-                          },
-                        ),
-                      ),
-                    ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _tipoCanalCtrl,
+                      decoration: const InputDecoration(labelText: 'Canal'),
+                      onSubmitted: (value) {
+                        ref.read(pdvsQueryProvider.notifier).state =
+                            query.copyWith(page: 1, tipoCanal: value.trim());
+                      },
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerRight,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DropdownButtonFormField<Supracanal?>(
+                      isExpanded: true,
+                      value: query.supracanal,
+                      decoration: const InputDecoration(
+                        labelText: 'Supracanal',
+                      ),
+                      items: const [
+                        DropdownMenuItem<Supracanal?>(
+                          value: null,
+                          child: Text('Todos'),
+                        ),
+                        DropdownMenuItem<Supracanal?>(
+                          value: Supracanal.onPremise,
+                          child: Text('OnPremise'),
+                        ),
+                        DropdownMenuItem<Supracanal?>(
+                          value: Supracanal.offPremise,
+                          child: Text('OffPremise'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        ref.read(pdvsQueryProvider.notifier).state = value ==
+                                null
+                            ? query.copyWith(page: 1, clearSupracanal: true)
+                            : query.copyWith(page: 1, supracanal: value);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<bool?>(
+                      isExpanded: true,
+                      value: query.activo,
+                      decoration: const InputDecoration(labelText: 'Activo'),
+                      items: const [
+                        DropdownMenuItem<bool?>(
+                          value: true,
+                          child: Text('Si'),
+                        ),
+                        DropdownMenuItem<bool?>(
+                          value: false,
+                          child: Text('No'),
+                        ),
+                        DropdownMenuItem<bool?>(
+                          value: null,
+                          child: Text('Todos'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        ref.read(pdvsQueryProvider.notifier).state = value ==
+                                null
+                            ? query.copyWith(page: 1, clearActivo: true)
+                            : query.copyWith(page: 1, activo: value);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
                     child: TextButton(
                       onPressed: () {
                         _nombreCtrl.clear();
                         _nitCtrl.clear();
+                        _tipoCanalCtrl.clear();
                         ref.read(pdvsQueryProvider.notifier).state =
                             const PdvsQuery();
                       },
@@ -266,8 +192,8 @@ class _PdvsPageState extends ConsumerState<PdvsPage> {
                   ),
                 ],
               ),
-            );
-          },
+            ],
+          ),
         ),
         const SizedBox(height: 8),
         Expanded(
@@ -326,22 +252,6 @@ class _PdvsPageState extends ConsumerState<PdvsPage> {
 
   bool _canMutate(TipoRol? rol) {
     return rol == TipoRol.autorizador || rol == TipoRol.administrador;
-  }
-
-  Future<_PdvOptionsData> _loadOptions() async {
-    final repository = ref.read(pdvsRepositoryProvider);
-    final results = await Future.wait([
-      repository.listClientesActivos(),
-      repository.listTiposCanal(),
-    ]);
-
-    final clientesResult = results[0] as Result<List<ClienteItem>>;
-    final tiposCanalResult = results[1] as Result<List<TipoCanalOption>>;
-
-    return _PdvOptionsData(
-      clientes: clientesResult.data ?? <ClienteItem>[],
-      tiposCanal: tiposCanalResult.data ?? <TipoCanalOption>[],
-    );
   }
 
   Future<void> _openPdvForm(
@@ -410,16 +320,6 @@ class _PdvsPageState extends ConsumerState<PdvsPage> {
   }
 }
 
-class _PdvOptionsData {
-  final List<ClienteItem> clientes;
-  final List<TipoCanalOption> tiposCanal;
-
-  const _PdvOptionsData({
-    required this.clientes,
-    required this.tiposCanal,
-  });
-}
-
 class _PdvCard extends StatelessWidget {
   final PdvItem item;
   final bool canMutate;
@@ -454,12 +354,15 @@ class _PdvCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text('Cliente: ${item.clienteCodigo} - ${item.clienteNombre}'),
           Text('Canal: ${item.tipoCanal}'),
           Text(
               'Supracanal: ${item.supracanal != null ? supracanalToApi(item.supracanal!) : '-'}'),
           Text('NIT: ${item.nit ?? '-'}'),
+          Text('Telefono: ${item.telefono ?? '-'}'),
           Text('Direccion: ${item.direccion ?? '-'}'),
+          Text('Direccion ID: ${item.direccionId}'),
+          Text('Sucursal: ${item.sucursal ?? '-'}'),
+          Text('Estado PDV: ${item.estadoPdv ?? '-'}'),
           Text(
             'Ubicacion: ${item.latitud != null && item.longitud != null ? '${item.latitud}, ${item.longitud}' : '-'}',
           ),
@@ -511,18 +414,13 @@ class _PdvFormSheetState extends ConsumerState<PdvFormSheet> {
   late final TextEditingController _latitudCtrl;
   late final TextEditingController _longitudCtrl;
   late final TextEditingController _nitCtrl;
-  late final TextEditingController _clienteCodigoCtrl;
-  late final TextEditingController _clienteNombreCtrl;
-  late final TextEditingController _clienteTelefonoCtrl;
-  late final TextEditingController _clienteDireccionCtrl;
-  late final TextEditingController _clienteDireccionIdCtrl;
-  late final TextEditingController _clienteLatitudCtrl;
-  late final TextEditingController _clienteLongitudCtrl;
-  String _clienteModo = 'existente';
-  String? _selectedClienteId;
-  int? _selectedTipoCanalId;
+  late final TextEditingController _telefonoCtrl;
+  late final TextEditingController _tipoCanalCtrl;
+  late final TextEditingController _sucursalCtrl;
+  late final TextEditingController _provinciaCtrl;
+  late final TextEditingController _subcanalCtrl;
+  late final TextEditingController _estadoPdvCtrl;
   Supracanal _selectedSupracanal = Supracanal.onPremise;
-  CategoriaSofia _clienteCategoria = CategoriaSofia.a;
   bool _saving = false;
   String? _error;
 
@@ -537,15 +435,12 @@ class _PdvFormSheetState extends ConsumerState<PdvFormSheet> {
     _longitudCtrl =
         TextEditingController(text: item?.longitud?.toString() ?? '');
     _nitCtrl = TextEditingController(text: item?.nit ?? '');
-    _clienteCodigoCtrl = TextEditingController();
-    _clienteNombreCtrl = TextEditingController();
-    _clienteTelefonoCtrl = TextEditingController();
-    _clienteDireccionCtrl = TextEditingController();
-    _clienteDireccionIdCtrl = TextEditingController();
-    _clienteLatitudCtrl = TextEditingController();
-    _clienteLongitudCtrl = TextEditingController();
-    _selectedClienteId = item?.idCliente;
-    _selectedTipoCanalId = item?.idTipoCanal;
+    _telefonoCtrl = TextEditingController(text: item?.telefono ?? '');
+    _tipoCanalCtrl = TextEditingController(text: item?.tipoCanal ?? '');
+    _sucursalCtrl = TextEditingController(text: item?.sucursal ?? '');
+    _provinciaCtrl = TextEditingController(text: item?.provincia ?? '');
+    _subcanalCtrl = TextEditingController(text: item?.subcanal ?? '');
+    _estadoPdvCtrl = TextEditingController(text: item?.estadoPdv ?? '');
     _selectedSupracanal = item?.supracanal ?? Supracanal.onPremise;
   }
 
@@ -557,13 +452,12 @@ class _PdvFormSheetState extends ConsumerState<PdvFormSheet> {
     _latitudCtrl.dispose();
     _longitudCtrl.dispose();
     _nitCtrl.dispose();
-    _clienteCodigoCtrl.dispose();
-    _clienteNombreCtrl.dispose();
-    _clienteTelefonoCtrl.dispose();
-    _clienteDireccionCtrl.dispose();
-    _clienteDireccionIdCtrl.dispose();
-    _clienteLatitudCtrl.dispose();
-    _clienteLongitudCtrl.dispose();
+    _telefonoCtrl.dispose();
+    _tipoCanalCtrl.dispose();
+    _sucursalCtrl.dispose();
+    _provinciaCtrl.dispose();
+    _subcanalCtrl.dispose();
+    _estadoPdvCtrl.dispose();
     super.dispose();
   }
 
@@ -575,357 +469,179 @@ class _PdvFormSheetState extends ConsumerState<PdvFormSheet> {
       appBar: AppBar(
         title: Text(isEditing ? 'Editar PDV' : 'Crear PDV'),
       ),
-      body: FutureBuilder<_PdvOptionsData>(
-        future: _loadOptions(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final options = snapshot.data!;
-
-          return ListView(
-            padding: const EdgeInsets.all(12),
-            children: [
-              if (_error != null) ...[
-                DataCard(child: Text(_error!)),
-                const SizedBox(height: 8),
-              ],
-              Form(
-                key: _formKey,
-                child: Column(
+      body: ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          if (_error != null) ...[
+            DataCard(child: Text(_error!)),
+            const SizedBox(height: 8),
+          ],
+          Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _nombreCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre negocio',
+                  ),
+                  validator: (value) {
+                    final text = (value ?? '').trim();
+                    if (text.length < 2) {
+                      return 'Nombre de negocio requerido';
+                    }
+                    if (text.length > 150) {
+                      return 'No puede exceder 150 caracteres';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _tipoCanalCtrl,
+                  decoration: const InputDecoration(labelText: 'Canal'),
+                  validator: (value) {
+                    final text = (value ?? '').trim();
+                    if (text.isEmpty) {
+                      return 'Canal requerido';
+                    }
+                    if (text.length > 100) {
+                      return 'No puede exceder 100 caracteres';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<Supracanal>(
+                  value: _selectedSupracanal,
+                  decoration: const InputDecoration(
+                    labelText: 'Supracanal',
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: Supracanal.onPremise,
+                      child: Text('OnPremise'),
+                    ),
+                    DropdownMenuItem(
+                      value: Supracanal.offPremise,
+                      child: Text('OffPremise'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _selectedSupracanal = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _nitCtrl,
+                  decoration: const InputDecoration(labelText: 'NIT'),
+                  validator: (value) {
+                    if ((value ?? '').trim().length > 50) {
+                      return 'NIT no puede exceder 50 caracteres';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _telefonoCtrl,
+                  decoration: const InputDecoration(labelText: 'Telefono'),
+                  validator: (value) {
+                    if ((value ?? '').trim().length > 30) {
+                      return 'Telefono no puede exceder 30 caracteres';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _direccionCtrl,
+                  decoration: const InputDecoration(labelText: 'Direccion'),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _direccionIdCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Direccion ID',
+                  ),
+                  validator: (value) {
+                    final text = (value ?? '').trim();
+                    if (text.isEmpty) {
+                      return 'Direccion ID requerido';
+                    }
+                    if (text.length > 100) {
+                      return 'Direccion ID no puede exceder 100 caracteres';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                Row(
                   children: [
-                    TextFormField(
-                      controller: _nombreCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre negocio',
-                      ),
-                      validator: (value) {
-                        final text = (value ?? '').trim();
-                        if (text.length < 2) {
-                          return 'Nombre de negocio requerido';
-                        }
-                        if (text.length > 150) {
-                          return 'No puede exceder 150 caracteres';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    if (!isEditing) ...[
-                      DropdownButtonFormField<String>(
-                        value: _clienteModo,
-                        decoration: const InputDecoration(labelText: 'Cliente'),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'existente',
-                            child: Text('Cliente existente'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'nuevo',
-                            child: Text('Nuevo cliente'),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() {
-                              _clienteModo = value;
-                              _selectedClienteId = null;
-                            });
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    if (isEditing || _clienteModo == 'existente') ...[
-                      DropdownButtonFormField<String?>(
-                        value: _selectedClienteId,
+                    Expanded(
+                      child: TextFormField(
+                        controller: _latitudCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                          signed: true,
+                        ),
                         decoration: const InputDecoration(
-                          labelText: 'Cliente existente',
+                          labelText: 'Latitud',
                         ),
-                        items: [
-                          const DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('Selecciona...'),
-                          ),
-                          ...options.clientes.map(
-                            (item) => DropdownMenuItem<String?>(
-                              value: item.idCliente,
-                              child: Text(
-                                '${item.codigoCliente} - ${item.nombre}',
-                              ),
-                            ),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          setState(() => _selectedClienteId = value);
-                        },
-                        validator: (value) {
-                          if ((value ?? '').trim().isEmpty) {
-                            return 'Cliente requerido';
-                          }
-                          return null;
-                        },
+                        validator: _validateLatitud,
                       ),
-                      const SizedBox(height: 12),
-                    ] else ...[
-                      TextFormField(
-                        controller: _clienteCodigoCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Codigo cliente',
-                        ),
-                        validator: (value) {
-                          final text = (value ?? '').trim();
-                          if (!RegExp(r'^\d+$').hasMatch(text)) {
-                            return 'Codigo cliente invalido';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _clienteNombreCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Nombre cliente',
-                        ),
-                        validator: (value) {
-                          if ((value ?? '').trim().length < 2) {
-                            return 'Nombre de cliente requerido';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _clienteTelefonoCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Telefono cliente',
-                        ),
-                        validator: (value) {
-                          if ((value ?? '').trim().length > 30) {
-                            return 'Telefono no puede exceder 30 caracteres';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<CategoriaSofia>(
-                        value: _clienteCategoria,
-                        decoration: const InputDecoration(
-                          labelText: 'Categoria Sofia',
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: CategoriaSofia.a,
-                            child: Text('A'),
-                          ),
-                          DropdownMenuItem(
-                            value: CategoriaSofia.b,
-                            child: Text('B'),
-                          ),
-                          DropdownMenuItem(
-                            value: CategoriaSofia.c,
-                            child: Text('C'),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => _clienteCategoria = value);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _clienteDireccionCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Direccion cliente',
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _clienteDireccionIdCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Direccion ID cliente',
-                        ),
-                        validator: (value) {
-                          if ((value ?? '').trim().length > 100) {
-                            return 'Direccion ID no puede exceder 100 caracteres';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _clienteLatitudCtrl,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                decimal: true,
-                                signed: true,
-                              ),
-                              decoration: const InputDecoration(
-                                labelText: 'Latitud cliente',
-                              ),
-                              validator: _validateLatitud,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _clienteLongitudCtrl,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                decimal: true,
-                                signed: true,
-                              ),
-                              decoration: const InputDecoration(
-                                labelText: 'Longitud cliente',
-                              ),
-                              validator: _validateLongitud,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    DropdownButtonFormField<int>(
-                      value: _selectedTipoCanalId,
-                      decoration: const InputDecoration(labelText: 'Canal'),
-                      items: options.tiposCanal
-                          .map(
-                            (item) => DropdownMenuItem<int>(
-                              value: item.id,
-                              child: Text(item.nombre),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() => _selectedTipoCanalId = value);
-                      },
-                      validator: (value) {
-                        if (value == null || value < 1) {
-                          return 'Canal requerido';
-                        }
-                        return null;
-                      },
                     ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<Supracanal>(
-                      value: _selectedSupracanal,
-                      decoration: const InputDecoration(
-                        labelText: 'Supracanal',
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: Supracanal.onPremise,
-                          child: Text('OnPremise'),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _longitudCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                          signed: true,
                         ),
-                        DropdownMenuItem(
-                          value: Supracanal.offPremise,
-                          child: Text('OffPremise'),
+                        decoration: const InputDecoration(
+                          labelText: 'Longitud',
                         ),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _selectedSupracanal = value);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _nitCtrl,
-                      decoration: const InputDecoration(labelText: 'NIT'),
-                      validator: (value) {
-                        if ((value ?? '').trim().length > 50) {
-                          return 'NIT no puede exceder 50 caracteres';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _direccionCtrl,
-                      decoration: const InputDecoration(labelText: 'Direccion'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _direccionIdCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Direccion ID',
-                      ),
-                      validator: (value) {
-                        if ((value ?? '').trim().length > 100) {
-                          return 'Direccion ID no puede exceder 100 caracteres';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _latitudCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                              signed: true,
-                            ),
-                            decoration: const InputDecoration(
-                              labelText: 'Latitud',
-                            ),
-                            validator: _validateLatitud,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _longitudCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                              signed: true,
-                            ),
-                            decoration: const InputDecoration(
-                              labelText: 'Longitud',
-                            ),
-                            validator: _validateLongitud,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: _saving ? null : _save,
-                        child: Text(_saving ? 'Guardando...' : 'Guardar PDV'),
+                        validator: _validateLongitud,
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
-          );
-        },
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _sucursalCtrl,
+                  decoration: const InputDecoration(labelText: 'Sucursal'),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _provinciaCtrl,
+                  decoration: const InputDecoration(labelText: 'Provincia'),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _subcanalCtrl,
+                  decoration: const InputDecoration(labelText: 'Subcanal'),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _estadoPdvCtrl,
+                  decoration: const InputDecoration(labelText: 'Estado PDV'),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: _saving ? null : _save,
+                    child: Text(_saving ? 'Guardando...' : 'Guardar PDV'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
-    );
-  }
-
-  Future<_PdvOptionsData> _loadOptions() async {
-    final repository = ref.read(pdvsRepositoryProvider);
-    final results = await Future.wait([
-      repository.listClientesActivos(),
-      repository.listTiposCanal(),
-    ]);
-
-    final clientesResult = results[0] as Result<List<ClienteItem>>;
-    final tiposCanalResult = results[1] as Result<List<TipoCanalOption>>;
-
-    return _PdvOptionsData(
-      clientes: clientesResult.data ?? <ClienteItem>[],
-      tiposCanal: tiposCanalResult.data ?? <TipoCanalOption>[],
     );
   }
 
@@ -946,29 +662,19 @@ class _PdvFormSheetState extends ConsumerState<PdvFormSheet> {
       latitud: _parseNullableDouble(_latitudCtrl.text),
       longitud: _parseNullableDouble(_longitudCtrl.text),
       nit: _nitCtrl.text.trim(),
-      idTipoCanal: _selectedTipoCanalId ?? 0,
+      telefono: _telefonoCtrl.text.trim(),
+      tipoCanal: _tipoCanalCtrl.text.trim(),
       supracanal: _selectedSupracanal,
-      idCliente: _selectedClienteId ?? '',
+      sucursal: _sucursalCtrl.text.trim(),
+      provincia: _provinciaCtrl.text.trim(),
+      subcanal: _subcanalCtrl.text.trim(),
+      estadoPdv: _estadoPdvCtrl.text.trim(),
     );
 
     final repository = ref.read(pdvsRepositoryProvider);
     final result = widget.item != null
         ? await repository.updatePdv(widget.item!.idPdv, pdvPayload)
-        : await repository.createPdvConCliente(
-            pdv: pdvPayload,
-            clienteNuevo: _clienteModo == 'nuevo'
-                ? ClienteNuevoPayload(
-                    codigoCliente: _clienteCodigoCtrl.text.trim(),
-                    nombre: _clienteNombreCtrl.text.trim(),
-                    telefono: _clienteTelefonoCtrl.text.trim(),
-                    categoriaSofia: _clienteCategoria,
-                    direccion: _clienteDireccionCtrl.text.trim(),
-                    direccionId: _clienteDireccionIdCtrl.text.trim(),
-                    latitud: _parseNullableDouble(_clienteLatitudCtrl.text),
-                    longitud: _parseNullableDouble(_clienteLongitudCtrl.text),
-                  )
-                : null,
-          );
+        : await repository.createPdv(pdvPayload);
 
     if (!mounted) {
       return;

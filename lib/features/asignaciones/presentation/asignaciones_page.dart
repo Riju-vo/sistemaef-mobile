@@ -22,7 +22,7 @@ class AsignacionesPage extends ConsumerStatefulWidget {
 
 class _AsignacionesPageState extends ConsumerState<AsignacionesPage> {
   late final TextEditingController _activoCtrl;
-  late final TextEditingController _clienteCtrl;
+  late final TextEditingController _etiquetaCtrl;
   late final TextEditingController _pdvCtrl;
   late final TextEditingController _estadoCtrl;
 
@@ -30,7 +30,7 @@ class _AsignacionesPageState extends ConsumerState<AsignacionesPage> {
   void initState() {
     super.initState();
     _activoCtrl = TextEditingController();
-    _clienteCtrl = TextEditingController();
+    _etiquetaCtrl = TextEditingController();
     _pdvCtrl = TextEditingController();
     _estadoCtrl = TextEditingController();
   }
@@ -38,7 +38,7 @@ class _AsignacionesPageState extends ConsumerState<AsignacionesPage> {
   @override
   void dispose() {
     _activoCtrl.dispose();
-    _clienteCtrl.dispose();
+    _etiquetaCtrl.dispose();
     _pdvCtrl.dispose();
     _estadoCtrl.dispose();
     super.dispose();
@@ -91,12 +91,11 @@ class _AsignacionesPageState extends ConsumerState<AsignacionesPage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextField(
-                      controller: _clienteCtrl,
-                      decoration:
-                          const InputDecoration(labelText: 'ID cliente'),
+                      controller: _etiquetaCtrl,
+                      decoration: const InputDecoration(labelText: 'Etiqueta'),
                       onSubmitted: (value) {
                         ref.read(asignacionesQueryProvider.notifier).state =
-                            query.copyWith(page: 1, idCliente: value.trim());
+                            query.copyWith(page: 1, etiqueta: value.trim());
                       },
                     ),
                   ),
@@ -108,10 +107,10 @@ class _AsignacionesPageState extends ConsumerState<AsignacionesPage> {
                   Expanded(
                     child: TextField(
                       controller: _pdvCtrl,
-                      decoration: const InputDecoration(labelText: 'ID PDV'),
+                      decoration: const InputDecoration(labelText: 'PDV'),
                       onSubmitted: (value) {
                         ref.read(asignacionesQueryProvider.notifier).state =
-                            query.copyWith(page: 1, idPdv: value.trim());
+                            query.copyWith(page: 1, pdv: value.trim());
                       },
                     ),
                   ),
@@ -159,7 +158,7 @@ class _AsignacionesPageState extends ConsumerState<AsignacionesPage> {
                       child: TextButton(
                         onPressed: () {
                           _activoCtrl.clear();
-                          _clienteCtrl.clear();
+                          _etiquetaCtrl.clear();
                           _pdvCtrl.clear();
                           _estadoCtrl.clear();
                           ref.read(asignacionesQueryProvider.notifier).state =
@@ -302,8 +301,7 @@ class _AsignacionCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text('Asignacion: ${item.idAsignacionActivo}'),
-          Text('Cliente: ${item.nombreCliente}'),
-          Text('PDV: ${item.nombrePdv ?? 'Sin PDV'}'),
+          Text('PDV: ${item.nombrePdv}'),
           Text('Estado: ${item.estado}'),
           Text('Inicio: ${item.fechaInicio}'),
           Text('Fin: ${item.fechaFin ?? '-'}'),
@@ -338,7 +336,6 @@ class CreateAsignacionSheet extends ConsumerStatefulWidget {
 class _CreateAsignacionSheetState extends ConsumerState<CreateAsignacionSheet> {
   final _formKey = GlobalKey<FormState>();
   String? _idActivo;
-  String? _idCliente;
   String? _idPdv;
   final _fechaInicioCtrl = TextEditingController();
   final _estadoCtrl = TextEditingController(text: 'ACTIVA');
@@ -361,7 +358,6 @@ class _CreateAsignacionSheetState extends ConsumerState<CreateAsignacionSheet> {
       body: FutureBuilder<List<dynamic>>(
         future: Future.wait([
           ref.read(asignacionesRepositoryProvider).listActivosDisponibles(),
-          ref.read(asignacionesRepositoryProvider).listClientesActivos(),
           ref.read(asignacionesRepositoryProvider).listPdvsActivos(),
         ]),
         builder: (context, snapshot) {
@@ -370,15 +366,11 @@ class _CreateAsignacionSheetState extends ConsumerState<CreateAsignacionSheet> {
           }
 
           final activosResult = snapshot.data![0] as Result<List<ActivoItem>>;
-          final clientesResult =
-              snapshot.data![1] as Result<List<ClienteOption>>;
-          final pdvsResult = snapshot.data![2] as Result<List<PdvOption>>;
+          final pdvsResult = snapshot.data![1] as Result<List<PdvOption>>;
 
           if (!activosResult.isSuccess ||
-              !clientesResult.isSuccess ||
               !pdvsResult.isSuccess ||
               activosResult.data == null ||
-              clientesResult.data == null ||
               pdvsResult.data == null) {
             return const Center(
               child: Text('No se pudieron cargar los datos para crear.'),
@@ -386,11 +378,7 @@ class _CreateAsignacionSheetState extends ConsumerState<CreateAsignacionSheet> {
           }
 
           final activos = activosResult.data!;
-          final clientes = clientesResult.data!;
-          final pdvs = pdvsResult.data!
-              .where(
-                  (item) => _idCliente == null || item.idCliente == _idCliente)
-              .toList();
+          final pdvs = pdvsResult.data!;
 
           return ListView(
             padding: const EdgeInsets.all(12),
@@ -420,42 +408,18 @@ class _CreateAsignacionSheetState extends ConsumerState<CreateAsignacionSheet> {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: _idCliente,
-                      decoration: const InputDecoration(labelText: 'Cliente'),
-                      items: clientes
+                      value: _idPdv,
+                      decoration: const InputDecoration(labelText: 'PDV'),
+                      items: pdvs
                           .map(
                             (item) => DropdownMenuItem<String>(
-                              value: item.idCliente,
-                              child: Text(
-                                  '${item.nombre} (${item.codigoCliente})'),
+                              value: item.idPdv,
+                              child: Text(item.nombreNegocio),
                             ),
                           )
                           .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _idCliente = value;
-                          _idPdv = null;
-                        });
-                      },
-                      validator: (value) => value == null ? 'Requerido' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String?>(
-                      value: _idPdv,
-                      decoration: const InputDecoration(labelText: 'PDV'),
-                      items: [
-                        const DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text('Sin PDV'),
-                        ),
-                        ...pdvs.map(
-                          (item) => DropdownMenuItem<String?>(
-                            value: item.idPdv,
-                            child: Text(item.nombreNegocio),
-                          ),
-                        ),
-                      ],
                       onChanged: (value) => setState(() => _idPdv = value),
+                      validator: (value) => value == null ? 'Requerido' : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -497,7 +461,7 @@ class _CreateAsignacionSheetState extends ConsumerState<CreateAsignacionSheet> {
   Future<void> _save() async {
     if (_formKey.currentState?.validate() != true ||
         _idActivo == null ||
-        _idCliente == null) {
+        _idPdv == null) {
       return;
     }
 
@@ -509,8 +473,7 @@ class _CreateAsignacionSheetState extends ConsumerState<CreateAsignacionSheet> {
     final result =
         await ref.read(asignacionesRepositoryProvider).createAsignacion(
               idActivo: _idActivo!,
-              idCliente: _idCliente!,
-              idPdv: _idPdv,
+              idPdv: _idPdv!,
               fechaInicio: _fechaInicioCtrl.text,
               estado: _estadoCtrl.text,
               observacion: _observacionCtrl.text,
@@ -548,7 +511,7 @@ class FinalizarAsignacionSheet extends ConsumerStatefulWidget {
 class _FinalizarAsignacionSheetState
     extends ConsumerState<FinalizarAsignacionSheet> {
   final _formKey = GlobalKey<FormState>();
-  int? _idEstadoActivo;
+  final _estadoActivoCtrl = TextEditingController();
   final _fechaFinCtrl = TextEditingController();
   final _estadoCtrl = TextEditingController(text: 'FINALIZADA');
   final _observacionCtrl = TextEditingController();
@@ -557,6 +520,7 @@ class _FinalizarAsignacionSheetState
 
   @override
   void dispose() {
+    _estadoActivoCtrl.dispose();
     _fechaFinCtrl.dispose();
     _estadoCtrl.dispose();
     _observacionCtrl.dispose();
@@ -567,93 +531,69 @@ class _FinalizarAsignacionSheetState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Finalizar asignacion')),
-      body: FutureBuilder<Result<List<CatalogOption>>>(
-        future: ref.read(asignacionesRepositoryProvider).listEstadosActivo(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final result = snapshot.data!;
-          if (!result.isSuccess || result.data == null) {
-            return const Center(
-              child: Text('No se pudieron cargar los estados de activo.'),
-            );
-          }
-
-          return ListView(
-            padding: const EdgeInsets.all(12),
-            children: [
-              DataCard(
-                child: Text(
-                  'Activo ${widget.item.etiquetaActivo} - Cliente ${widget.item.nombreCliente}',
+      body: ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          DataCard(
+            child: Text(
+              'Activo ${widget.item.etiquetaActivo} - PDV ${widget.item.nombrePdv}',
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (_error != null) ...[
+            DataCard(child: Text(_error!)),
+            const SizedBox(height: 8),
+          ],
+          Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _estadoActivoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nuevo estado del activo',
+                  ),
+                  validator: (value) => (value == null || value.trim().isEmpty)
+                      ? 'Requerido'
+                      : null,
                 ),
-              ),
-              const SizedBox(height: 8),
-              if (_error != null) ...[
-                DataCard(child: Text(_error!)),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _fechaFinCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Fecha fin (YYYY-MM-DD)',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _estadoCtrl,
+                  decoration: const InputDecoration(labelText: 'Estado'),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _observacionCtrl,
+                  maxLines: 4,
+                  decoration:
+                      const InputDecoration(labelText: 'Observacion'),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: _saving ? null : _save,
+                    child: Text(_saving ? 'Guardando...' : 'Guardar'),
+                  ),
+                ),
               ],
-              Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    DropdownButtonFormField<int>(
-                      value: _idEstadoActivo,
-                      decoration: const InputDecoration(
-                        labelText: 'Nuevo estado del activo',
-                      ),
-                      items: result.data!
-                          .map(
-                            (item) => DropdownMenuItem<int>(
-                              value: item.id,
-                              child: Text(item.nombre),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) =>
-                          setState(() => _idEstadoActivo = value),
-                      validator: (value) => value == null ? 'Requerido' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _fechaFinCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Fecha fin (YYYY-MM-DD)',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _estadoCtrl,
-                      decoration: const InputDecoration(labelText: 'Estado'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _observacionCtrl,
-                      maxLines: 4,
-                      decoration:
-                          const InputDecoration(labelText: 'Observacion'),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: _saving ? null : _save,
-                        child: Text(_saving ? 'Guardando...' : 'Guardar'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Future<void> _save() async {
-    if (_formKey.currentState?.validate() != true || _idEstadoActivo == null) {
+    if (_formKey.currentState?.validate() != true) {
       return;
     }
 
@@ -665,7 +605,7 @@ class _FinalizarAsignacionSheetState
     final result =
         await ref.read(asignacionesRepositoryProvider).finalizarAsignacion(
               id: widget.item.idAsignacionActivo,
-              idEstadoActivo: _idEstadoActivo!,
+              estadoActivo: _estadoActivoCtrl.text.trim(),
               fechaFin: _fechaFinCtrl.text,
               estado: _estadoCtrl.text,
               observacion: _observacionCtrl.text,

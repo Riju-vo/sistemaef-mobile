@@ -9,13 +9,15 @@ import '../domain/activo_models.dart';
 abstract class ActivosRepository {
   Future<Result<ActivosListResponse>> listActivos(ActivosQuery query);
   Future<Result<ActivoContextoOperativo>> getContextoOperativo(String id);
-  Future<Result<List<CatalogOption>>> listCatalog(String route);
   Future<Result<ActivoItem>> createActivo(ActivoUpsertPayload payload);
   Future<Result<ActivoItem>> updateActivo(
     String id,
     ActivoUpsertPayload payload,
   );
-  Future<Result<ActivoItem>> changeEstadoActivo(String id, int idEstadoActivo);
+  Future<Result<ActivoItem>> changeEstadoActivo(
+    String id,
+    String estadoActivo,
+  );
 }
 
 final activosRepositoryProvider = Provider<ActivosRepository>((ref) {
@@ -66,24 +68,6 @@ class ActivosRepositoryImpl implements ActivosRepository {
   }
 
   @override
-  Future<Result<List<CatalogOption>>> listCatalog(String route) async {
-    try {
-      final response = await _dio.get('/catalogos/$route');
-      final data = response.data as List<dynamic>? ?? <dynamic>[];
-      return Result.success(
-        data
-            .cast<Map>()
-            .map((item) => CatalogOption.fromJson(item.cast<String, dynamic>()))
-            .toList(),
-      );
-    } catch (error) {
-      return Result.error(
-        extractDioErrorMessage(error, 'No se pudo cargar catalogos de soporte'),
-      );
-    }
-  }
-
-  @override
   Future<Result<ActivoItem>> createActivo(ActivoUpsertPayload payload) async {
     try {
       final response = await _dio.post('/activos', data: payload.toJson());
@@ -117,12 +101,12 @@ class ActivosRepositoryImpl implements ActivosRepository {
   @override
   Future<Result<ActivoItem>> changeEstadoActivo(
     String id,
-    int idEstadoActivo,
+    String estadoActivo,
   ) async {
     try {
       final response = await _dio.patch(
         '/activos/$id/estado',
-        data: {'id_estado_activo': idEstadoActivo},
+        data: {'estado_activo': estadoActivo},
       );
       return Result.success(
         ActivoItem.fromJson((response.data as Map).cast<String, dynamic>()),

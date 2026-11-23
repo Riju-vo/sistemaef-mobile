@@ -31,6 +31,7 @@ abstract class TicketsRepository {
     String? idResponsableEjecucion,
   });
   Future<Result<TicketItem>> getTicket(String id);
+  Future<Result<TicketItem>> tomarTicket(String id);
   Future<Result<TicketItem>> iniciarAtencion(String id);
   Future<Result<TicketItem>> cerrarTicket({
     required String id,
@@ -201,6 +202,20 @@ class TicketsRepositoryImpl implements TicketsRepository {
       return Result.error(
         extractDioErrorMessage(
             error, 'No se pudo cargar el detalle del ticket'),
+      );
+    }
+  }
+
+  @override
+  Future<Result<TicketItem>> tomarTicket(String id) async {
+    try {
+      final response = await _dio.patch('/tickets/$id/tomar', data: {});
+      return Result.success(
+        TicketItem.fromJson((response.data as Map).cast<String, dynamic>()),
+      );
+    } catch (error) {
+      return Result.error(
+        extractDioErrorMessage(error, 'No se pudo tomar el ticket'),
       );
     }
   }

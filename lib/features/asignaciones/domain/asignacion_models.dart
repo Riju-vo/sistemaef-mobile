@@ -8,10 +8,8 @@ class AsignacionItem {
   final String? observacion;
   final String idActivo;
   final String etiquetaActivo;
-  final String idCliente;
-  final String nombreCliente;
-  final String? idPdv;
-  final String? nombrePdv;
+  final String idPdv;
+  final String nombrePdv;
 
   const AsignacionItem({
     required this.idAsignacionActivo,
@@ -21,8 +19,6 @@ class AsignacionItem {
     required this.observacion,
     required this.idActivo,
     required this.etiquetaActivo,
-    required this.idCliente,
-    required this.nombreCliente,
     required this.idPdv,
     required this.nombrePdv,
   });
@@ -36,10 +32,8 @@ class AsignacionItem {
       observacion: json['observacion'] as String?,
       idActivo: (json['id_activo'] ?? '').toString(),
       etiquetaActivo: (json['etiqueta_activo'] ?? '') as String,
-      idCliente: (json['id_cliente'] ?? '').toString(),
-      nombreCliente: (json['nombre_cliente'] ?? '') as String,
-      idPdv: json['id_pdv']?.toString(),
-      nombrePdv: json['nombre_pdv'] as String?,
+      idPdv: (json['id_pdv'] ?? '').toString(),
+      nombrePdv: (json['nombre_pdv'] ?? '') as String,
     );
   }
 }
@@ -48,8 +42,9 @@ class AsignacionesQuery {
   final int page;
   final int limit;
   final String idActivo;
-  final String idCliente;
+  final String etiqueta;
   final String idPdv;
+  final String pdv;
   final bool? activa;
   final String estado;
 
@@ -57,8 +52,9 @@ class AsignacionesQuery {
     this.page = 1,
     this.limit = 20,
     this.idActivo = '',
-    this.idCliente = '',
+    this.etiqueta = '',
     this.idPdv = '',
+    this.pdv = '',
     this.activa,
     this.estado = '',
   });
@@ -67,8 +63,9 @@ class AsignacionesQuery {
     int? page,
     int? limit,
     String? idActivo,
-    String? idCliente,
+    String? etiqueta,
     String? idPdv,
+    String? pdv,
     bool? activa,
     bool clearActiva = false,
     String? estado,
@@ -77,8 +74,9 @@ class AsignacionesQuery {
       page: page ?? this.page,
       limit: limit ?? this.limit,
       idActivo: idActivo ?? this.idActivo,
-      idCliente: idCliente ?? this.idCliente,
+      etiqueta: etiqueta ?? this.etiqueta,
       idPdv: idPdv ?? this.idPdv,
+      pdv: pdv ?? this.pdv,
       activa: clearActiva ? null : (activa ?? this.activa),
       estado: estado ?? this.estado,
     );
@@ -89,8 +87,9 @@ class AsignacionesQuery {
       'page': page,
       'limit': limit,
       if (idActivo.trim().isNotEmpty) 'id_activo': idActivo.trim(),
-      if (idCliente.trim().isNotEmpty) 'id_cliente': idCliente.trim(),
+      if (etiqueta.trim().isNotEmpty) 'etiqueta': etiqueta.trim(),
       if (idPdv.trim().isNotEmpty) 'id_pdv': idPdv.trim(),
+      if (pdv.trim().isNotEmpty) 'pdv': pdv.trim(),
       if (activa != null) 'activa': activa,
       if (estado.trim().isNotEmpty) 'estado': estado.trim(),
     };
@@ -121,39 +120,14 @@ class AsignacionesListResponse {
   }
 }
 
-class ClienteOption {
-  final String idCliente;
-  final String codigoCliente;
-  final String nombre;
-  final bool activo;
-
-  const ClienteOption({
-    required this.idCliente,
-    required this.codigoCliente,
-    required this.nombre,
-    required this.activo,
-  });
-
-  factory ClienteOption.fromJson(Map<String, dynamic> json) {
-    return ClienteOption(
-      idCliente: (json['id_cliente'] ?? '').toString(),
-      codigoCliente: (json['codigo_cliente'] ?? '').toString(),
-      nombre: (json['nombre'] ?? '') as String,
-      activo: (json['activo'] ?? false) as bool,
-    );
-  }
-}
-
 class PdvOption {
   final String idPdv;
   final String nombreNegocio;
-  final String idCliente;
   final bool activo;
 
   const PdvOption({
     required this.idPdv,
     required this.nombreNegocio,
-    required this.idCliente,
     required this.activo,
   });
 
@@ -161,25 +135,7 @@ class PdvOption {
     return PdvOption(
       idPdv: (json['id_pdv'] ?? '').toString(),
       nombreNegocio: (json['nombre_negocio'] ?? '') as String,
-      idCliente: (json['id_cliente'] ?? '').toString(),
       activo: (json['activo'] ?? false) as bool,
-    );
-  }
-}
-
-class CatalogOption {
-  final int id;
-  final String nombre;
-
-  const CatalogOption({
-    required this.id,
-    required this.nombre,
-  });
-
-  factory CatalogOption.fromJson(Map<String, dynamic> json) {
-    return CatalogOption(
-      id: (json['id'] ?? 0) as int,
-      nombre: (json['nombre'] ?? '') as String,
     );
   }
 }

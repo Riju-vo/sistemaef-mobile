@@ -4,7 +4,7 @@ import '../data/catalogos_repository.dart';
 import '../domain/catalogo_models.dart';
 
 final activeCatalogProvider = StateProvider<CatalogRoute>((ref) {
-  return CatalogRoute.tiposActivo;
+  return CatalogRoute.roles;
 });
 
 final catalogItemsProvider = FutureProvider.autoDispose<List<CatalogItem>>((ref) async {

@@ -25,6 +25,7 @@ class MePage extends ConsumerWidget {
               Text('Usuario: ${auth.user?.username ?? '-'}'),
               Text('Email: ${auth.user?.email ?? '-'}'),
               Text('Rol: ${tipoRolLabel(auth.user?.rol)}'),
+              Text('Sucursal: ${auth.user?.sucursal ?? '-'}'),
             ],
           ),
         ),

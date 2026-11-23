@@ -17,72 +17,38 @@ class CatalogosPage extends ConsumerStatefulWidget {
 }
 
 class _CatalogosPageState extends ConsumerState<CatalogosPage> {
-  final _newItemCtrl = TextEditingController();
-
-  @override
-  void dispose() {
-    _newItemCtrl.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
     final isAdmin = auth.user?.rol == TipoRol.administrador;
-    final activeCatalog = ref.watch(activeCatalogProvider);
     final itemsAsync = ref.watch(catalogItemsProvider);
+
+    if (!isAdmin) {
+      return const Column(
+        children: [
+          PageHeader(
+            title: 'Catalogos',
+            subtitle: 'Administracion de roles del sistema',
+          ),
+          SizedBox(height: 8),
+          DataCard(
+            child: Text('Esta seccion es exclusiva de administradores.'),
+          ),
+        ],
+      );
+    }
 
     return Column(
       children: [
         PageHeader(
           title: 'Catalogos',
-          subtitle: 'Administracion de tablas maestras del sistema',
+          subtitle: 'Administracion de roles del sistema',
           action: IconButton(
             onPressed: () => ref.refresh(catalogItemsProvider),
             icon: const Icon(Icons.refresh),
             tooltip: 'Recargar',
           ),
         ),
-        DataCard(
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final route in CatalogRoute.values)
-                ChoiceChip(
-                  label: Text(catalogRouteLabel(route)),
-                  selected: route == activeCatalog,
-                  onSelected: (_) {
-                    _newItemCtrl.clear();
-                    ref.read(activeCatalogProvider.notifier).state = route;
-                  },
-                ),
-            ],
-          ),
-        ),
-        if (isAdmin && catalogRouteCanCreate(activeCatalog)) ...[
-          const SizedBox(height: 8),
-          DataCard(
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _newItemCtrl,
-                    decoration: InputDecoration(
-                      labelText: 'Nuevo item en ${catalogRouteLabel(activeCatalog)}',
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                FilledButton.icon(
-                  onPressed: _createItem,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Agregar'),
-                ),
-              ],
-            ),
-          ),
-        ],
         const SizedBox(height: 8),
         Expanded(
           child: itemsAsync.when(
@@ -133,49 +99,6 @@ class _CatalogosPageState extends ConsumerState<CatalogosPage> {
           ),
         ),
       ],
-    );
-  }
-
-  Future<void> _createItem() async {
-    final route = ref.read(activeCatalogProvider);
-    final name = _newItemCtrl.text.trim();
-
-    if (name.length < 2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('El nombre debe tener al menos 2 caracteres')),
-      );
-      return;
-    }
-
-    if (name.length > 100) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('El nombre no puede exceder 100 caracteres')),
-      );
-      return;
-    }
-
-    final repository = ref.read(catalogosRepositoryProvider);
-    final result = await repository.createCatalogItem(route, name);
-
-    if (!mounted) {
-      return;
-    }
-
-    if (result.isSuccess) {
-      _newItemCtrl.clear();
-      ref.invalidate(catalogItemsProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Item creado correctamente')),
-      );
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          result.failure?.message ?? 'No fue posible crear el item',
-        ),
-      ),
     );
   }
 

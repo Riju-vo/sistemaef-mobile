@@ -30,14 +30,14 @@ void main() {
       const query = PdvsQuery(
         nombreNegocio: 'Kiosko Norte',
         supracanal: Supracanal.offPremise,
-        idTipoCanal: 4,
+        tipoCanal: 'Supermercado',
       );
 
       expect(query.toQueryParameters(), {
         'page': 1,
         'limit': 20,
         'nombre_negocio': 'Kiosko Norte',
-        'id_tipo_canal': 4,
+        'tipo_canal': 'Supermercado',
         'supracanal': 'OffPremise',
         'activo': true,
       });

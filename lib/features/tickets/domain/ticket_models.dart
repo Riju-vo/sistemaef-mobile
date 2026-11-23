@@ -18,19 +18,18 @@ enum TicketResponsableTipo {
 class TicketCandidato {
   final String idActivo;
   final String idAsignacionActivo;
-  final String idCliente;
-  final String? idPdv;
+  final String idPdv;
   final String etiqueta;
   final String serial;
   final String descripcionEquipo;
   final String estadoEquipo;
-  final String nombreCliente;
-  final String? nombrePdv;
+  final String nombrePdv;
   final String? direccion;
   final String? telefono;
-  final String? direccionId;
-  final String? canal;
-  final String? supracanal;
+  final String direccionId;
+  final String canal;
+  final String supracanal;
+  final String? sucursal;
   final bool bloqueadoPorTicketAbierto;
   final String? ticketAbiertoId;
   final TicketEstado? ticketAbiertoEstado;
@@ -38,19 +37,18 @@ class TicketCandidato {
   const TicketCandidato({
     required this.idActivo,
     required this.idAsignacionActivo,
-    required this.idCliente,
     required this.idPdv,
     required this.etiqueta,
     required this.serial,
     required this.descripcionEquipo,
     required this.estadoEquipo,
-    required this.nombreCliente,
     required this.nombrePdv,
     required this.direccion,
     required this.telefono,
     required this.direccionId,
     required this.canal,
     required this.supracanal,
+    required this.sucursal,
     required this.bloqueadoPorTicketAbierto,
     required this.ticketAbiertoId,
     required this.ticketAbiertoEstado,
@@ -60,19 +58,18 @@ class TicketCandidato {
     return TicketCandidato(
       idActivo: (json['id_activo'] ?? '').toString(),
       idAsignacionActivo: (json['id_asignacion_activo'] ?? '').toString(),
-      idCliente: (json['id_cliente'] ?? '').toString(),
-      idPdv: json['id_pdv']?.toString(),
+      idPdv: (json['id_pdv'] ?? '').toString(),
       etiqueta: (json['etiqueta'] ?? '') as String,
       serial: (json['serial'] ?? '') as String,
       descripcionEquipo: (json['descripcion_equipo'] ?? '') as String,
       estadoEquipo: (json['estado_equipo'] ?? '') as String,
-      nombreCliente: (json['nombre_cliente'] ?? '') as String,
-      nombrePdv: json['nombre_pdv'] as String?,
+      nombrePdv: (json['nombre_pdv'] ?? '') as String,
       direccion: json['direccion'] as String?,
       telefono: json['telefono'] as String?,
-      direccionId: json['direccion_id'] as String?,
-      canal: json['canal'] as String?,
-      supracanal: json['supracanal'] as String?,
+      direccionId: (json['direccion_id'] ?? '').toString(),
+      canal: (json['canal'] ?? '') as String,
+      supracanal: (json['supracanal'] ?? '') as String,
+      sucursal: json['sucursal'] as String?,
       bloqueadoPorTicketAbierto:
           (json['bloqueado_por_ticket_abierto'] ?? false) as bool,
       ticketAbiertoId: json['ticket_abierto_id']?.toString(),
@@ -135,43 +132,16 @@ class TicketActivo {
   }
 }
 
-class TicketCliente {
-  final String idCliente;
-  final String codigoCliente;
-  final String nombre;
-  final String? telefono;
-  final String? direccion;
-  final String? direccionId;
-
-  const TicketCliente({
-    required this.idCliente,
-    required this.codigoCliente,
-    required this.nombre,
-    required this.telefono,
-    required this.direccion,
-    required this.direccionId,
-  });
-
-  factory TicketCliente.fromJson(Map<String, dynamic> json) {
-    return TicketCliente(
-      idCliente: (json['id_cliente'] ?? '').toString(),
-      codigoCliente: (json['codigo_cliente'] ?? '').toString(),
-      nombre: (json['nombre'] ?? '') as String,
-      telefono: json['telefono'] as String?,
-      direccion: json['direccion'] as String?,
-      direccionId: json['direccion_id'] as String?,
-    );
-  }
-}
-
 class TicketPdv {
   final String idPdv;
   final String nombreNegocio;
   final String? direccion;
-  final String? direccionId;
+  final String direccionId;
   final String? nit;
+  final String? telefono;
   final String supracanal;
   final String canal;
+  final String? sucursal;
 
   const TicketPdv({
     required this.idPdv,
@@ -179,8 +149,10 @@ class TicketPdv {
     required this.direccion,
     required this.direccionId,
     required this.nit,
+    required this.telefono,
     required this.supracanal,
     required this.canal,
+    required this.sucursal,
   });
 
   factory TicketPdv.fromJson(Map<String, dynamic> json) {
@@ -188,10 +160,12 @@ class TicketPdv {
       idPdv: (json['id_pdv'] ?? '').toString(),
       nombreNegocio: (json['nombre_negocio'] ?? '') as String,
       direccion: json['direccion'] as String?,
-      direccionId: json['direccion_id'] as String?,
+      direccionId: (json['direccion_id'] ?? '').toString(),
       nit: json['nit'] as String?,
+      telefono: json['telefono'] as String?,
       supracanal: (json['supracanal'] ?? '') as String,
       canal: (json['canal'] ?? '') as String,
+      sucursal: json['sucursal'] as String?,
     );
   }
 }
@@ -213,8 +187,7 @@ class TicketItem {
   final String? comentarioCierre;
   final String? evidenciaCierreUrl;
   final TicketActivo activo;
-  final TicketCliente cliente;
-  final TicketPdv? pdv;
+  final TicketPdv pdv;
   final TicketUsuario registrador;
   final TicketUsuario? autorizador;
   final TicketUsuario? responsableEjecucion;
@@ -236,7 +209,6 @@ class TicketItem {
     required this.comentarioCierre,
     required this.evidenciaCierreUrl,
     required this.activo,
-    required this.cliente,
     required this.pdv,
     required this.registrador,
     required this.autorizador,
@@ -263,11 +235,7 @@ class TicketItem {
       evidenciaCierreUrl: json['evidencia_cierre_url'] as String?,
       activo: TicketActivo.fromJson(
           (json['activo'] as Map).cast<String, dynamic>()),
-      cliente: TicketCliente.fromJson(
-          (json['cliente'] as Map).cast<String, dynamic>()),
-      pdv: json['pdv'] == null
-          ? null
-          : TicketPdv.fromJson((json['pdv'] as Map).cast<String, dynamic>()),
+      pdv: TicketPdv.fromJson((json['pdv'] as Map).cast<String, dynamic>()),
       registrador: TicketUsuario.fromJson(
           (json['registrador'] as Map).cast<String, dynamic>()),
       autorizador: json['autorizador'] == null

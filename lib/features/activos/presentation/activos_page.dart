@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme.dart';
-import '../../../core/errors/result.dart';
 import '../../../features/auth/presentation/auth_controller.dart';
 import '../../../shared/models/tipo_rol.dart';
 import '../../../shared/ui/data_card.dart';
@@ -334,6 +333,7 @@ class _ActivoCard extends StatelessWidget {
             Text('Modelo: ${item.modelo ?? '-'}'),
             Text('Fabricante: ${item.fabricante ?? '-'}'),
             Text('Provincia: ${item.provincia ?? '-'}'),
+            Text('Sucursal: ${item.sucursal ?? '-'}'),
           ],
         ),
       ),
@@ -407,6 +407,10 @@ class ActivoDetailSheet extends ConsumerWidget {
                       value: activo.provincia ?? '-',
                     ),
                     _DetailLine(
+                      label: 'Sucursal',
+                      value: activo.sucursal ?? '-',
+                    ),
+                    _DetailLine(
                       label: 'Observacion',
                       value: activo.observacion ?? '-',
                     ),
@@ -461,32 +465,20 @@ class ActivoDetailSheet extends ConsumerWidget {
                         value: asignacion.estado,
                       ),
                       _DetailLine(
-                        label: 'Cliente',
-                        value: asignacion.cliente.nombre,
-                      ),
-                      _DetailLine(
-                        label: 'Codigo cliente',
-                        value: asignacion.cliente.codigoCliente,
-                      ),
-                      _DetailLine(
-                        label: 'Categoria',
-                        value: asignacion.cliente.categoriaSofia,
-                      ),
-                      _DetailLine(
-                        label: 'Telefono',
-                        value: asignacion.cliente.telefono ?? '-',
-                      ),
-                      _DetailLine(
                         label: 'PDV',
-                        value: asignacion.pdv?.nombreNegocio ?? 'Sin PDV',
+                        value: asignacion.pdv.nombreNegocio,
+                      ),
+                      _DetailLine(
+                        label: 'Telefono PDV',
+                        value: asignacion.pdv.telefono ?? '-',
                       ),
                       _DetailLine(
                         label: 'Canal',
-                        value: asignacion.pdv?.canal ?? '-',
+                        value: asignacion.pdv.canal,
                       ),
                       _DetailLine(
                         label: 'Supracanal',
-                        value: asignacion.pdv?.supracanal ?? '-',
+                        value: asignacion.pdv.supracanal,
                       ),
                       _DetailLine(
                         label: 'Observacion asignacion',
@@ -536,64 +528,37 @@ class ActivoDetailSheet extends ConsumerWidget {
     ActivoItem activo,
     WidgetRef ref,
   ) async {
-    final estadosResult =
-        await ref.read(activosRepositoryProvider).listCatalog('estados-activo');
-    if (!context.mounted) return;
-
-    if (!estadosResult.isSuccess || estadosResult.data == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo cargar los estados')),
-      );
-      return;
-    }
-
-    int? selected = activo.idEstadoActivo;
+    final controller = TextEditingController(text: activo.estadoActivo);
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setLocalState) {
-            return AlertDialog(
-              title: const Text('Cambiar estado del activo'),
-              content: DropdownButtonFormField<int>(
-                value: selected,
-                decoration: const InputDecoration(labelText: 'Nuevo estado'),
-                items: estadosResult.data!
-                    .map(
-                      (item) => DropdownMenuItem<int>(
-                        value: item.id,
-                        child: Text(item.nombre),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  setLocalState(() => selected = value);
-                },
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child: const Text('Cancelar'),
-                ),
-                FilledButton(
-                  onPressed: selected == null
-                      ? null
-                      : () => Navigator.of(dialogContext).pop(true),
-                  child: const Text('Guardar'),
-                ),
-              ],
-            );
-          },
+        return AlertDialog(
+          title: const Text('Cambiar estado del activo'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(labelText: 'Nuevo estado'),
+            textCapitalization: TextCapitalization.characters,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Guardar'),
+            ),
+          ],
         );
       },
     );
 
-    if (confirmed != true || selected == null) return;
+    if (confirmed != true || controller.text.trim().isEmpty) return;
 
     final result = await ref
         .read(activosRepositoryProvider)
-        .changeEstadoActivo(activo.idActivo, selected!);
+        .changeEstadoActivo(activo.idActivo, controller.text.trim());
 
     if (!context.mounted) return;
 
@@ -640,15 +605,16 @@ class _ActivoFormSheetState extends ConsumerState<ActivoFormSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _serialCtrl;
   late final TextEditingController _etiquetaCtrl;
+  late final TextEditingController _tipoActivoCtrl;
+  late final TextEditingController _estadoActivoCtrl;
+  late final TextEditingController _descripcionEquipoCtrl;
   late final TextEditingController _fabricanteCtrl;
   late final TextEditingController _modeloCtrl;
   late final TextEditingController _anioCtrl;
   late final TextEditingController _provinciaCtrl;
+  late final TextEditingController _sucursalCtrl;
   late final TextEditingController _observacionCtrl;
   bool _activo = true;
-  int? _tipoActivoId;
-  int? _estadoActivoId;
-  int? _descripcionEquipoId;
   bool _saving = false;
   String? _error;
 
@@ -658,26 +624,33 @@ class _ActivoFormSheetState extends ConsumerState<ActivoFormSheet> {
     final initial = widget.initial;
     _serialCtrl = TextEditingController(text: initial?.serial ?? '');
     _etiquetaCtrl = TextEditingController(text: initial?.etiqueta ?? '');
+    _tipoActivoCtrl = TextEditingController(text: initial?.tipoActivo ?? '');
+    _estadoActivoCtrl =
+        TextEditingController(text: initial?.estadoActivo ?? '');
+    _descripcionEquipoCtrl =
+        TextEditingController(text: initial?.descripcionEquipo ?? '');
     _fabricanteCtrl = TextEditingController(text: initial?.fabricante ?? '');
     _modeloCtrl = TextEditingController(text: initial?.modelo ?? '');
     _anioCtrl =
         TextEditingController(text: _normalizeDate(initial?.anioFabricacion));
     _provinciaCtrl = TextEditingController(text: initial?.provincia ?? '');
+    _sucursalCtrl = TextEditingController(text: initial?.sucursal ?? '');
     _observacionCtrl = TextEditingController(text: initial?.observacion ?? '');
     _activo = initial?.activo ?? true;
-    _tipoActivoId = initial?.idTipoActivo;
-    _estadoActivoId = initial?.idEstadoActivo;
-    _descripcionEquipoId = initial?.idDescripcionEquipo;
   }
 
   @override
   void dispose() {
     _serialCtrl.dispose();
     _etiquetaCtrl.dispose();
+    _tipoActivoCtrl.dispose();
+    _estadoActivoCtrl.dispose();
+    _descripcionEquipoCtrl.dispose();
     _fabricanteCtrl.dispose();
     _modeloCtrl.dispose();
     _anioCtrl.dispose();
     _provinciaCtrl.dispose();
+    _sucursalCtrl.dispose();
     _observacionCtrl.dispose();
     super.dispose();
   }
@@ -688,169 +661,117 @@ class _ActivoFormSheetState extends ConsumerState<ActivoFormSheet> {
       appBar: AppBar(
         title: Text(widget.initial == null ? 'Crear activo' : 'Editar activo'),
       ),
-      body: FutureBuilder<List<Result<List<CatalogOption>>>>(
-        future: Future.wait([
-          ref.read(activosRepositoryProvider).listCatalog('tipos-activo'),
-          ref.read(activosRepositoryProvider).listCatalog('estados-activo'),
-          ref
-              .read(activosRepositoryProvider)
-              .listCatalog('descripciones-equipo'),
-        ]),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final results = snapshot.data!;
-          if (results.any((item) => !item.isSuccess || item.data == null)) {
-            return const Center(
-              child: Text('No se pudieron cargar los catalogos necesarios.'),
-            );
-          }
-
-          final tiposActivo = results[0].data!;
-          final estadosActivo = results[1].data!;
-          final descripciones = results[2].data!;
-
-          return ListView(
-            padding: const EdgeInsets.all(12),
-            children: [
-              if (_error != null) ...[
-                DataCard(child: Text(_error!)),
-                const SizedBox(height: 8),
-              ],
-              Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    TextFormField(
-                      controller: _serialCtrl,
-                      decoration: const InputDecoration(labelText: 'Serial'),
-                      validator: (value) =>
-                          (value == null || value.trim().isEmpty)
-                              ? 'Requerido'
-                              : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _etiquetaCtrl,
-                      decoration: const InputDecoration(labelText: 'Etiqueta'),
-                      validator: (value) =>
-                          (value == null || value.trim().isEmpty)
-                              ? 'Requerido'
-                              : null,
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<int>(
-                      value: _tipoActivoId,
-                      decoration:
-                          const InputDecoration(labelText: 'Tipo activo'),
-                      items: tiposActivo
-                          .map(
-                            (item) => DropdownMenuItem<int>(
-                              value: item.id,
-                              child: Text(item.nombre),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) =>
-                          setState(() => _tipoActivoId = value),
-                      validator: (value) => value == null ? 'Requerido' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<int>(
-                      value: _estadoActivoId,
-                      decoration:
-                          const InputDecoration(labelText: 'Estado activo'),
-                      items: estadosActivo
-                          .map(
-                            (item) => DropdownMenuItem<int>(
-                              value: item.id,
-                              child: Text(item.nombre),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) =>
-                          setState(() => _estadoActivoId = value),
-                      validator: (value) => value == null ? 'Requerido' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<int>(
-                      value: _descripcionEquipoId,
-                      decoration: const InputDecoration(
-                          labelText: 'Descripcion equipo'),
-                      items: descripciones
-                          .map(
-                            (item) => DropdownMenuItem<int>(
-                              value: item.id,
-                              child: Text(item.nombre),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) =>
-                          setState(() => _descripcionEquipoId = value),
-                      validator: (value) => value == null ? 'Requerido' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _fabricanteCtrl,
-                      decoration:
-                          const InputDecoration(labelText: 'Fabricante'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _modeloCtrl,
-                      decoration: const InputDecoration(labelText: 'Modelo'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _anioCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Anio fabricacion (YYYY-MM-DD)',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _provinciaCtrl,
-                      decoration: const InputDecoration(labelText: 'Provincia'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _observacionCtrl,
-                      maxLines: 4,
-                      decoration:
-                          const InputDecoration(labelText: 'Observacion'),
-                    ),
-                    const SizedBox(height: 12),
-                    SwitchListTile(
-                      value: _activo,
-                      onChanged: (value) => setState(() => _activo = value),
-                      title: const Text('Registro activo'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: _saving ? null : _save,
-                        child: Text(_saving ? 'Guardando...' : 'Guardar'),
-                      ),
-                    ),
-                  ],
+      body: ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          if (_error != null) ...[
+            DataCard(child: Text(_error!)),
+            const SizedBox(height: 8),
+          ],
+          Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _serialCtrl,
+                  decoration: const InputDecoration(labelText: 'Serial'),
+                  validator: (value) => (value == null || value.trim().isEmpty)
+                      ? 'Requerido'
+                      : null,
                 ),
-              ),
-            ],
-          );
-        },
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _etiquetaCtrl,
+                  decoration: const InputDecoration(labelText: 'Etiqueta'),
+                  validator: (value) => (value == null || value.trim().isEmpty)
+                      ? 'Requerido'
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _tipoActivoCtrl,
+                  decoration: const InputDecoration(labelText: 'Tipo activo'),
+                  validator: (value) => (value == null || value.trim().isEmpty)
+                      ? 'Requerido'
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _estadoActivoCtrl,
+                  decoration: const InputDecoration(labelText: 'Estado activo'),
+                  validator: (value) => (value == null || value.trim().isEmpty)
+                      ? 'Requerido'
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _descripcionEquipoCtrl,
+                  decoration:
+                      const InputDecoration(labelText: 'Descripcion equipo'),
+                  validator: (value) => (value == null || value.trim().isEmpty)
+                      ? 'Requerido'
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _fabricanteCtrl,
+                  decoration:
+                      const InputDecoration(labelText: 'Fabricante'),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _modeloCtrl,
+                  decoration: const InputDecoration(labelText: 'Modelo'),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _anioCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Anio fabricacion (YYYY-MM-DD)',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _provinciaCtrl,
+                  decoration: const InputDecoration(labelText: 'Provincia'),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _sucursalCtrl,
+                  decoration: const InputDecoration(labelText: 'Sucursal'),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _observacionCtrl,
+                  maxLines: 4,
+                  decoration:
+                      const InputDecoration(labelText: 'Observacion'),
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  value: _activo,
+                  onChanged: (value) => setState(() => _activo = value),
+                  title: const Text('Registro activo'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: _saving ? null : _save,
+                    child: Text(_saving ? 'Guardando...' : 'Guardar'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Future<void> _save() async {
-    if (_formKey.currentState?.validate() != true ||
-        _tipoActivoId == null ||
-        _estadoActivoId == null ||
-        _descripcionEquipoId == null) {
+    if (_formKey.currentState?.validate() != true) {
       return;
     }
 
@@ -862,15 +783,16 @@ class _ActivoFormSheetState extends ConsumerState<ActivoFormSheet> {
     final payload = ActivoUpsertPayload(
       serial: _serialCtrl.text,
       etiqueta: _etiquetaCtrl.text,
-      idDescripcionEquipo: _descripcionEquipoId!,
+      descripcionEquipo: _descripcionEquipoCtrl.text,
       fabricante: _fabricanteCtrl.text,
       modelo: _modeloCtrl.text,
       anioFabricacion: _anioCtrl.text,
       provincia: _provinciaCtrl.text,
       observacion: _observacionCtrl.text,
       activo: _activo,
-      idTipoActivo: _tipoActivoId!,
-      idEstadoActivo: _estadoActivoId!,
+      tipoActivo: _tipoActivoCtrl.text,
+      estadoActivo: _estadoActivoCtrl.text,
+      sucursal: _sucursalCtrl.text,
     );
 
     final repository = ref.read(activosRepositoryProvider);

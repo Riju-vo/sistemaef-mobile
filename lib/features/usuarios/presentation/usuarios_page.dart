@@ -360,6 +360,7 @@ class _UsuarioCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text('Correo: ${item.email}'),
           Text('Rol: ${item.rol ?? 'Sin rol'}'),
+          Text('Sucursal: ${item.sucursal ?? '-'}'),
           Text('Creado: ${_formatDate(item.createdAt)}'),
           Text('Ultima actividad: ${_formatDate(item.lastActive)}'),
           const SizedBox(height: 12),
@@ -405,6 +406,7 @@ class _UsuarioFormSheetState extends ConsumerState<UsuarioFormSheet> {
   late final TextEditingController _usernameCtrl;
   late final TextEditingController _emailCtrl;
   late final TextEditingController _passwordCtrl;
+  late final TextEditingController _sucursalCtrl;
   int? _selectedRol;
   bool _clearRol = false;
   bool _saving = false;
@@ -417,6 +419,7 @@ class _UsuarioFormSheetState extends ConsumerState<UsuarioFormSheet> {
     _usernameCtrl = TextEditingController(text: item?.username ?? '');
     _emailCtrl = TextEditingController(text: item?.email ?? '');
     _passwordCtrl = TextEditingController();
+    _sucursalCtrl = TextEditingController(text: item?.sucursal ?? '');
     _selectedRol = item?.tipoRol;
   }
 
@@ -425,6 +428,7 @@ class _UsuarioFormSheetState extends ConsumerState<UsuarioFormSheet> {
     _usernameCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _sucursalCtrl.dispose();
     super.dispose();
   }
 
@@ -535,6 +539,11 @@ class _UsuarioFormSheetState extends ConsumerState<UsuarioFormSheet> {
                       },
                     ),
                     const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _sucursalCtrl,
+                      decoration: const InputDecoration(labelText: 'Sucursal'),
+                    ),
+                    const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
@@ -578,6 +587,7 @@ class _UsuarioFormSheetState extends ConsumerState<UsuarioFormSheet> {
               email: _emailCtrl.text.trim(),
               password: _passwordCtrl.text.trim(),
               tipoRol: _selectedRol,
+              sucursal: _sucursalCtrl.text.trim(),
             ),
           )
         : await repository.updateUsuario(
@@ -588,6 +598,8 @@ class _UsuarioFormSheetState extends ConsumerState<UsuarioFormSheet> {
               password: _passwordCtrl.text.trim(),
               tipoRol: _selectedRol,
               clearTipoRol: _clearRol,
+              sucursal: _sucursalCtrl.text.trim(),
+              clearSucursal: _sucursalCtrl.text.trim().isEmpty,
             ),
           );
 

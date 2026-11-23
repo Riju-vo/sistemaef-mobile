@@ -74,7 +74,7 @@ class _TicketsPageState extends ConsumerState<TicketsPage> {
               TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  labelText: 'Buscar por activo, serial, cliente o PDV',
+                  labelText: 'Buscar por activo, serial o PDV',
                   suffixIcon: IconButton(
                     onPressed: () {
                       _searchController.clear();
@@ -350,8 +350,7 @@ class _TicketCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text('Activo: ${item.activo.etiqueta}'),
-            Text('Cliente: ${item.cliente.nombre}'),
-            Text('PDV: ${item.pdv?.nombreNegocio ?? 'Sin PDV'}'),
+            Text('PDV: ${item.pdv.nombreNegocio}'),
             Text('Servicio: ${formatTicketTipoServicio(item.tipoServicio)}'),
             Text('Estado equipo: ${item.activo.estadoEquipo}'),
             Text('Registrador: ${item.registrador.username}'),
@@ -413,7 +412,6 @@ class _TicketDetailSheetState extends ConsumerState<TicketDetailSheet> {
   final _observacionCtrl = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
   TicketResponsableTipo? _responsableTipo;
-  String? _responsableId;
 
   @override
   void dispose() {
@@ -434,18 +432,13 @@ class _TicketDetailSheetState extends ConsumerState<TicketDetailSheet> {
         data: (ticket) {
           final canExecute = _canExecuteTicket(ticket, auth.user);
           final canAuthorize = _canAuthorizeTicket(auth.user?.rol);
-          final responsablesFuture = _responsableTipo == null
-              ? null
-              : ref
-                  .read(ticketsRepositoryProvider)
-                  .listResponsables(_responsableTipo!);
+          final canTomar = _canTomarTicket(ticket, auth.user?.rol);
 
           if (_observacionCtrl.text.isEmpty &&
               (ticket.observacionAutorizador ?? '').trim().isNotEmpty) {
             _observacionCtrl.text = ticket.observacionAutorizador!;
           }
           _responsableTipo ??= ticket.tipoResponsableEjecucion;
-          _responsableId ??= ticket.responsableEjecucion?.idUsuario;
 
           return ListView(
             padding: const EdgeInsets.all(12),
@@ -496,10 +489,9 @@ class _TicketDetailSheetState extends ConsumerState<TicketDetailSheet> {
                       label: 'Estado equipo',
                       value: ticket.activo.estadoEquipo,
                     ),
-                    _DetailLine(label: 'Cliente', value: ticket.cliente.nombre),
                     _DetailLine(
                       label: 'PDV',
-                      value: ticket.pdv?.nombreNegocio ?? 'Sin PDV',
+                      value: ticket.pdv.nombreNegocio,
                     ),
                     _DetailLine(
                       label: 'Registrador',
@@ -625,51 +617,21 @@ class _TicketDetailSheetState extends ConsumerState<TicketDetailSheet> {
                         onChanged: (value) {
                           setState(() {
                             _responsableTipo = value;
-                            _responsableId = null;
                           });
                         },
                       ),
-                      if (_responsableTipo != null) ...[
-                        const SizedBox(height: 12),
-                        FutureBuilder(
-                          future: responsablesFuture,
-                          builder: (context, snapshot) {
-                            final result = snapshot.data;
-                            final responsables = result != null &&
-                                    result.isSuccess &&
-                                    result.data != null
-                                ? result.data!
-                                : <TicketUsuario>[];
-
-                            return DropdownButtonFormField<String?>(
-                              value: _responsableId,
-                              decoration: const InputDecoration(
-                                labelText: 'Responsable de ejecucion',
-                              ),
-                              items: [
-                                const DropdownMenuItem<String?>(
-                                  value: null,
-                                  child: Text('Selecciona un responsable'),
-                                ),
-                                ...responsables.map(
-                                  (item) => DropdownMenuItem<String?>(
-                                    value: item.idUsuario,
-                                    child: Text(
-                                      item.email.isNotEmpty
-                                          ? '${item.username} (${item.email})'
-                                          : item.username,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                              onChanged: snapshot.connectionState ==
-                                      ConnectionState.waiting
-                                  ? null
-                                  : (value) {
-                                      setState(() => _responsableId = value);
-                                    },
-                            );
-                          },
+                      if (_responsableTipo == TicketResponsableTipo.tecnicoInterno) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Queda en cola para que un tecnico interno lo tome.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                      if (_responsableTipo == TicketResponsableTipo.proveedor) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Se asigna automaticamente al proveedor activo.',
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
                       const SizedBox(height: 12),
@@ -705,6 +667,17 @@ class _TicketDetailSheetState extends ConsumerState<TicketDetailSheet> {
                         ],
                       ),
                     ],
+                  ),
+                ),
+              ],
+              if (canTomar) ...[
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed:
+                      _isStarting ? null : () => _tomarTicket(ticket.idTicket),
+                  icon: const Icon(Icons.pan_tool_alt_outlined),
+                  label: Text(
+                    _isStarting ? 'Tomando...' : 'Tomar ticket',
                   ),
                 ),
               ],
@@ -759,6 +732,38 @@ class _TicketDetailSheetState extends ConsumerState<TicketDetailSheet> {
     return rol == TipoRol.autorizador || rol == TipoRol.administrador;
   }
 
+  bool _canTomarTicket(TicketItem ticket, TipoRol? rol) {
+    if (rol != TipoRol.tecnicoInterno && rol != TipoRol.administrador) {
+      return false;
+    }
+    return ticket.estado == TicketEstado.aprobado &&
+        ticket.tipoResponsableEjecucion ==
+            TicketResponsableTipo.tecnicoInterno &&
+        ticket.responsableEjecucion == null;
+  }
+
+  Future<void> _tomarTicket(String ticketId) async {
+    setState(() {
+      _isStarting = true;
+      _actionError = null;
+    });
+
+    final result =
+        await ref.read(ticketsRepositoryProvider).tomarTicket(ticketId);
+
+    if (!mounted) return;
+
+    setState(() {
+      _isStarting = false;
+      _actionError = result.isSuccess ? null : result.failure?.message;
+    });
+
+    if (result.isSuccess) {
+      ref.invalidate(ticketDetailProvider(ticketId));
+      ref.invalidate(ticketsListProvider);
+    }
+  }
+
   Future<void> _decidirTicket({
     required String ticketId,
     required String decision,
@@ -771,19 +776,11 @@ class _TicketDetailSheetState extends ConsumerState<TicketDetailSheet> {
       return;
     }
 
-    if (decision == 'APROBAR') {
-      if (_responsableTipo == null) {
-        setState(() {
-          _actionError = 'Debes seleccionar un tipo de ejecutor';
-        });
-        return;
-      }
-      if (_responsableId == null || _responsableId!.trim().isEmpty) {
-        setState(() {
-          _actionError = 'Debes seleccionar un responsable de ejecucion';
-        });
-        return;
-      }
+    if (decision == 'APROBAR' && _responsableTipo == null) {
+      setState(() {
+        _actionError = 'Debes seleccionar un tipo de ejecutor';
+      });
+      return;
     }
 
     setState(() {
@@ -796,7 +793,6 @@ class _TicketDetailSheetState extends ConsumerState<TicketDetailSheet> {
           decision: decision,
           observacionAutorizador: observacion,
           tipoResponsable: decision == 'APROBAR' ? _responsableTipo : null,
-          idResponsableEjecucion: decision == 'APROBAR' ? _responsableId : null,
         );
 
     if (!mounted) return;
@@ -1134,7 +1130,7 @@ class _CreateTicketSheetState extends ConsumerState<CreateTicketSheet> {
                       controller: _searchCtrl,
                       decoration: InputDecoration(
                         labelText:
-                            'Buscar candidato por activo, serial, cliente o PDV',
+                            'Buscar candidato por activo, serial o PDV',
                         suffixIcon: IconButton(
                           onPressed: () {
                             _searchCtrl.clear();
@@ -1219,8 +1215,7 @@ class _CreateTicketSheetState extends ConsumerState<CreateTicketSheet> {
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 6),
-                        Text('Cliente: ${candidate.nombreCliente}'),
-                        Text('PDV: ${candidate.nombrePdv ?? 'Sin PDV'}'),
+                        Text('PDV: ${candidate.nombrePdv}'),
                         Text('Equipo: ${candidate.descripcionEquipo}'),
                         Text('Estado: ${candidate.estadoEquipo}'),
                         if (candidate.bloqueadoPorTicketAbierto)

@@ -1,5 +1,4 @@
 import '../../../shared/models/pagination_meta.dart';
-import '../../clientes/domain/cliente_models.dart';
 
 enum Supracanal { onPremise, offPremise }
 
@@ -23,38 +22,22 @@ String supracanalToApi(Supracanal value) {
   }
 }
 
-class TipoCanalOption {
-  final int id;
-  final String nombre;
-
-  const TipoCanalOption({
-    required this.id,
-    required this.nombre,
-  });
-
-  factory TipoCanalOption.fromJson(Map<String, dynamic> json) {
-    return TipoCanalOption(
-      id: (json['id'] ?? 0) as int,
-      nombre: (json['nombre'] ?? '') as String,
-    );
-  }
-}
-
 class PdvItem {
   final String idPdv;
   final String nombreNegocio;
   final String? direccion;
-  final String? direccionId;
+  final String direccionId;
   final double? latitud;
   final double? longitud;
   final String? nit;
-  final int idTipoCanal;
+  final String? telefono;
   final String tipoCanal;
   final Supracanal? supracanal;
   final bool activo;
-  final String idCliente;
-  final String clienteNombre;
-  final String clienteCodigo;
+  final String? sucursal;
+  final String? provincia;
+  final String? subcanal;
+  final String? estadoPdv;
 
   const PdvItem({
     required this.idPdv,
@@ -64,13 +47,14 @@ class PdvItem {
     required this.latitud,
     required this.longitud,
     required this.nit,
-    required this.idTipoCanal,
+    required this.telefono,
     required this.tipoCanal,
     required this.supracanal,
     required this.activo,
-    required this.idCliente,
-    required this.clienteNombre,
-    required this.clienteCodigo,
+    required this.sucursal,
+    required this.provincia,
+    required this.subcanal,
+    required this.estadoPdv,
   });
 
   factory PdvItem.fromJson(Map<String, dynamic> json) {
@@ -78,17 +62,18 @@ class PdvItem {
       idPdv: (json['id_pdv'] ?? '').toString(),
       nombreNegocio: (json['nombre_negocio'] ?? '') as String,
       direccion: json['direccion'] as String?,
-      direccionId: json['direccion_id'] as String?,
+      direccionId: (json['direccion_id'] ?? '').toString(),
       latitud: (json['latitud'] as num?)?.toDouble(),
       longitud: (json['longitud'] as num?)?.toDouble(),
       nit: json['nit'] as String?,
-      idTipoCanal: (json['id_tipo_canal'] ?? 0) as int,
+      telefono: json['telefono'] as String?,
       tipoCanal: (json['tipo_canal'] ?? '') as String,
       supracanal: supracanalFromApiNullable(json['supracanal'] as String?),
       activo: (json['activo'] ?? false) as bool,
-      idCliente: (json['id_cliente'] ?? '').toString(),
-      clienteNombre: (json['cliente_nombre'] ?? '') as String,
-      clienteCodigo: (json['cliente_codigo'] ?? '').toString(),
+      sucursal: json['sucursal'] as String?,
+      provincia: json['provincia'] as String?,
+      subcanal: json['subcanal'] as String?,
+      estadoPdv: json['estado_pdv'] as String?,
     );
   }
 }
@@ -96,20 +81,20 @@ class PdvItem {
 class PdvsQuery {
   final int page;
   final int limit;
-  final String idCliente;
   final String nombreNegocio;
   final String nit;
-  final int? idTipoCanal;
+  final String direccionId;
+  final String tipoCanal;
   final Supracanal? supracanal;
   final bool? activo;
 
   const PdvsQuery({
     this.page = 1,
     this.limit = 20,
-    this.idCliente = '',
     this.nombreNegocio = '',
     this.nit = '',
-    this.idTipoCanal,
+    this.direccionId = '',
+    this.tipoCanal = '',
     this.supracanal,
     this.activo = true,
   });
@@ -117,11 +102,10 @@ class PdvsQuery {
   PdvsQuery copyWith({
     int? page,
     int? limit,
-    String? idCliente,
     String? nombreNegocio,
     String? nit,
-    int? idTipoCanal,
-    bool clearTipoCanal = false,
+    String? direccionId,
+    String? tipoCanal,
     Supracanal? supracanal,
     bool clearSupracanal = false,
     bool? activo,
@@ -130,10 +114,10 @@ class PdvsQuery {
     return PdvsQuery(
       page: page ?? this.page,
       limit: limit ?? this.limit,
-      idCliente: idCliente ?? this.idCliente,
       nombreNegocio: nombreNegocio ?? this.nombreNegocio,
       nit: nit ?? this.nit,
-      idTipoCanal: clearTipoCanal ? null : (idTipoCanal ?? this.idTipoCanal),
+      direccionId: direccionId ?? this.direccionId,
+      tipoCanal: tipoCanal ?? this.tipoCanal,
       supracanal: clearSupracanal ? null : (supracanal ?? this.supracanal),
       activo: clearActivo ? null : (activo ?? this.activo),
     );
@@ -143,11 +127,11 @@ class PdvsQuery {
     return {
       'page': page,
       'limit': limit,
-      if (idCliente.trim().isNotEmpty) 'id_cliente': idCliente.trim(),
       if (nombreNegocio.trim().isNotEmpty)
         'nombre_negocio': nombreNegocio.trim(),
       if (nit.trim().isNotEmpty) 'nit': nit.trim(),
-      if (idTipoCanal != null) 'id_tipo_canal': idTipoCanal,
+      if (direccionId.trim().isNotEmpty) 'direccion_id': direccionId.trim(),
+      if (tipoCanal.trim().isNotEmpty) 'tipo_canal': tipoCanal.trim(),
       if (supracanal != null) 'supracanal': supracanalToApi(supracanal!),
       if (activo != null) 'activo': activo,
     };
@@ -181,13 +165,17 @@ class PdvsListResponse {
 class PdvUpsertPayload {
   final String nombreNegocio;
   final String? direccion;
-  final String? direccionId;
+  final String direccionId;
   final double? latitud;
   final double? longitud;
   final String? nit;
-  final int idTipoCanal;
+  final String? telefono;
+  final String tipoCanal;
   final Supracanal supracanal;
-  final String idCliente;
+  final String? sucursal;
+  final String? provincia;
+  final String? subcanal;
+  final String? estadoPdv;
 
   const PdvUpsertPayload({
     required this.nombreNegocio,
@@ -196,60 +184,30 @@ class PdvUpsertPayload {
     required this.latitud,
     required this.longitud,
     required this.nit,
-    required this.idTipoCanal,
+    required this.telefono,
+    required this.tipoCanal,
     required this.supracanal,
-    required this.idCliente,
+    required this.sucursal,
+    required this.provincia,
+    required this.subcanal,
+    required this.estadoPdv,
   });
 
   Map<String, dynamic> toJson() {
     return {
       'nombre_negocio': nombreNegocio.trim(),
       if ((direccion ?? '').trim().isNotEmpty) 'direccion': direccion!.trim(),
-      if ((direccionId ?? '').trim().isNotEmpty)
-        'direccion_id': direccionId!.trim(),
+      'direccion_id': direccionId.trim(),
       if (latitud != null) 'latitud': latitud,
       if (longitud != null) 'longitud': longitud,
       if ((nit ?? '').trim().isNotEmpty) 'nit': nit!.trim(),
-      'id_tipo_canal': idTipoCanal,
-      'supracanal': supracanalToApi(supracanal),
-      'id_cliente': idCliente.trim(),
-    };
-  }
-}
-
-class ClienteNuevoPayload {
-  final String codigoCliente;
-  final String nombre;
-  final String? telefono;
-  final CategoriaSofia categoriaSofia;
-  final String? direccion;
-  final String? direccionId;
-  final double? latitud;
-  final double? longitud;
-
-  const ClienteNuevoPayload({
-    required this.codigoCliente,
-    required this.nombre,
-    required this.telefono,
-    required this.categoriaSofia,
-    required this.direccion,
-    required this.direccionId,
-    required this.latitud,
-    required this.longitud,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'modo': 'nuevo',
-      'codigo_cliente': codigoCliente.trim(),
-      'nombre': nombre.trim(),
       if ((telefono ?? '').trim().isNotEmpty) 'telefono': telefono!.trim(),
-      'categoria_sofia': categoriaSofiaToApi(categoriaSofia),
-      if ((direccion ?? '').trim().isNotEmpty) 'direccion': direccion!.trim(),
-      if ((direccionId ?? '').trim().isNotEmpty)
-        'direccion_id': direccionId!.trim(),
-      if (latitud != null) 'latitud': latitud,
-      if (longitud != null) 'longitud': longitud,
+      'tipo_canal': tipoCanal.trim(),
+      'supracanal': supracanalToApi(supracanal),
+      if ((sucursal ?? '').trim().isNotEmpty) 'sucursal': sucursal!.trim(),
+      if ((provincia ?? '').trim().isNotEmpty) 'provincia': provincia!.trim(),
+      if ((subcanal ?? '').trim().isNotEmpty) 'subcanal': subcanal!.trim(),
+      if ((estadoPdv ?? '').trim().isNotEmpty) 'estado_pdv': estadoPdv!.trim(),
     };
   }
 }

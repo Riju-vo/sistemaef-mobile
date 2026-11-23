@@ -26,6 +26,7 @@ class UsuarioItem {
   final bool activo;
   final int? tipoRol;
   final String? rol;
+  final String? sucursal;
 
   const UsuarioItem({
     required this.idUsuario,
@@ -36,6 +37,7 @@ class UsuarioItem {
     required this.activo,
     required this.tipoRol,
     required this.rol,
+    required this.sucursal,
   });
 
   factory UsuarioItem.fromJson(Map<String, dynamic> json) {
@@ -48,6 +50,7 @@ class UsuarioItem {
       activo: (json['activo'] ?? false) as bool,
       tipoRol: json['tipo_rol'] as int?,
       rol: json['rol'] as String?,
+      sucursal: json['sucursal'] as String?,
     );
   }
 }
@@ -130,12 +133,14 @@ class UsuarioCreatePayload {
   final String email;
   final String password;
   final int? tipoRol;
+  final String? sucursal;
 
   const UsuarioCreatePayload({
     required this.username,
     required this.email,
     required this.password,
     required this.tipoRol,
+    required this.sucursal,
   });
 
   Map<String, dynamic> toJson() {
@@ -144,6 +149,7 @@ class UsuarioCreatePayload {
       'email': email.trim(),
       'password': password.trim(),
       if (tipoRol != null) 'tipo_rol': tipoRol,
+      if ((sucursal ?? '').trim().isNotEmpty) 'sucursal': sucursal!.trim(),
     };
   }
 }
@@ -154,6 +160,8 @@ class UsuarioUpdatePayload {
   final String? password;
   final int? tipoRol;
   final bool clearTipoRol;
+  final String? sucursal;
+  final bool clearSucursal;
 
   const UsuarioUpdatePayload({
     required this.username,
@@ -161,6 +169,8 @@ class UsuarioUpdatePayload {
     required this.password,
     required this.tipoRol,
     required this.clearTipoRol,
+    required this.sucursal,
+    required this.clearSucursal,
   });
 
   Map<String, dynamic> toJson() {
@@ -170,6 +180,9 @@ class UsuarioUpdatePayload {
       if ((password ?? '').trim().isNotEmpty) 'password': password!.trim(),
       if (clearTipoRol) 'tipo_rol': null,
       if (!clearTipoRol && tipoRol != null) 'tipo_rol': tipoRol,
+      if (clearSucursal) 'sucursal': null,
+      if (!clearSucursal && (sucursal ?? '').trim().isNotEmpty)
+        'sucursal': sucursal!.trim(),
     };
   }
 }

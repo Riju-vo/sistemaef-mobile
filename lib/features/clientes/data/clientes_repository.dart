@@ -14,8 +14,6 @@ abstract class ClientesRepository {
     ClienteUpsertPayload payload,
   );
   Future<Result<ClienteItem>> removeCliente(String id);
-  Future<Result<String>> uploadClientesCsv(CsvUploadPayload payload);
-  Future<Result<ClienteImportJob>> getImportJobStatus(String jobId);
 }
 
 final clientesRepositoryProvider = Provider<ClientesRepository>((ref) {
@@ -91,43 +89,4 @@ class ClientesRepositoryImpl implements ClientesRepository {
     }
   }
 
-  @override
-  Future<Result<String>> uploadClientesCsv(CsvUploadPayload payload) async {
-    try {
-      final response = await _dio.post(
-        '/clientes/carga-masiva',
-        data: FormData.fromMap({
-          'file': MultipartFile.fromBytes(
-            payload.bytes,
-            filename: payload.filename,
-          ),
-        }),
-      );
-      final jobId = ((response.data as Map).cast<String, dynamic>())['job_id'];
-      return Result.success((jobId ?? '').toString());
-    } catch (error) {
-      return Result.error(
-        extractDioErrorMessage(error, 'No se pudo subir el archivo CSV'),
-      );
-    }
-  }
-
-  @override
-  Future<Result<ClienteImportJob>> getImportJobStatus(String jobId) async {
-    try {
-      final response = await _dio.get('/clientes/carga-masiva/status/$jobId');
-      return Result.success(
-        ClienteImportJob.fromJson(
-          (response.data as Map).cast<String, dynamic>(),
-        ),
-      );
-    } catch (error) {
-      return Result.error(
-        extractDioErrorMessage(
-          error,
-          'No se pudo consultar el estado de la importacion',
-        ),
-      );
-    }
-  }
 }
